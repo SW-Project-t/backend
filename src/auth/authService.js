@@ -1,7 +1,6 @@
 const admin = require('firebase-admin');
 const serviceAccount = require('../config/service-account-key.json');
 
-// 1. Initialize Firebase Admin SDK
 if (!admin.apps.length) {
     admin.initializeApp({
         credential: admin.credential.cert(serviceAccount)
@@ -10,9 +9,6 @@ if (!admin.apps.length) {
 
 const auth = admin.auth();
 
-/**
- * TASK 1: Register a new user (Sign Up)
- */
 const signUp = async (email, password) => {
     try {
         const userRecord = await auth.createUser({
@@ -28,10 +24,6 @@ const signUp = async (email, password) => {
     }
 };
 
-/**
- * TASK 2: Send Password Reset Email
- * Note: Admin SDK generates a link. Person 4 will use this link.
- */
 const getPasswordResetLink = async (email) => {
     try {
         const link = await auth.generatePasswordResetLink(email);
@@ -43,9 +35,6 @@ const getPasswordResetLink = async (email) => {
     }
 };
 
-/**
- * TASK 3: Delete User (Optional but useful for Admin Dashboard)
- */
 const deleteUser = async (uid) => {
     try {
         await auth.deleteUser(uid);
@@ -58,8 +47,4 @@ const deleteUser = async (uid) => {
 };
 
 // Export all functions for Person 4 (Integration)
-module.exports = { 
-    signUp, 
-    getPasswordResetLink, 
-    deleteUser 
-};
+module.exports = { signUp,  getPasswordResetLink,  deleteUser};
