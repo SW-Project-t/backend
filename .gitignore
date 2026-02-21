@@ -10,3 +10,9 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 dist/
+firebase-debug.log*
+ui-debug.log*
+.runtimeconfig.json
+*.local.secret.json
+
+service-account-key.json
