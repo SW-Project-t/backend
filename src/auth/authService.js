@@ -46,5 +46,16 @@ const deleteUser = async (uid) => {
     }
 };
 
+const verifyToken = async (idToken) => {
+    try {
+        const decodedToken = await auth.verifyIdToken(idToken);
+        console.log(' Token is valid for UID:', decodedToken.uid);
+        return { success: true, uid: decodedToken.uid };
+    } catch (error) {
+        console.error(' Invalid Token:', error.code);
+        return { success: false, error: error.code };
+    }
+};
+
 // Export all functions for Person 4 (Integration)
-module.exports = { signUp,  getPasswordResetLink,  deleteUser};
+module.exports = { signUp,  getPasswordResetLink,  deleteUser,  verifyToken };
