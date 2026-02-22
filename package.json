@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "start": "node src/index.js",
+  "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
@@ -18,6 +19,8 @@
   },
   "homepage": "https://github.com/OS-Project-t/backend#readme",
   "dependencies": {
+    "body-parser": "^2.2.2",
+    "express": "^5.2.1",
     "firebase-admin": "^13.6.1"
   }
 }
