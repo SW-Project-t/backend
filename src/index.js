@@ -81,7 +81,7 @@ app.post('/reset-password', async (req, res) => {
         res.status(500).json({ success: false, error: "An internal server error occurred" });
     }
 });
-
+app.get('/', (req, res) => res.send("Server is ALIVE!")); //check the server
 //(Verify Login & Get Profile)
 app.post('/verify-login', async (req, res) => {
     try {
