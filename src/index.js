@@ -10,7 +10,7 @@ app.use(cors());//to allow cross-origin requests from our frontend (React app)
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
 
-app.post('/register', async (req, res) => {
+app.post('/admin/add-user', async (req, res) => {
     try {
         const { email, password, fullName, role } = req.body;
 
