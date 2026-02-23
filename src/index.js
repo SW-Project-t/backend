@@ -1,10 +1,12 @@
 const express = require('express');
+const cors = require('cors'); //to make sure our API can be accessed from different origins (like our frontend)
 const bodyParser = require('body-parser');
 const authService = require('./auth/authService'); 
 const databaseService = require('./database/databaseService'); 
 
 const app = express();
 
+app.use(cors());//to allow cross-origin requests from our frontend (React app)
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
 
@@ -51,6 +53,65 @@ app.post('/register', async (req, res) => {
             success: false, 
             error: "An internal server error occurred" 
         });
+    }
+});
+// (password Reset)
+app.post('/reset-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ success: false, error: "Email is required" });
+        }
+
+        const resetResult = await authService.getPasswordResetLink(email);
+
+        if (resetResult.success) {
+            return res.status(200).json({ 
+                success: true, 
+                message: "Password reset link generated successfully!", 
+                link: resetResult.link 
+            });
+        } else {
+            return res.status(400).json({ success: false, error: resetResult.error });
+        }
+
+    } catch (error) {
+        console.error("Reset Password Error:", error);
+        res.status(500).json({ success: false, error: "An internal server error occurred" });
+    }
+});
+
+//(Verify Login & Get Profile)
+app.post('/verify-login', async (req, res) => {
+    try {
+        const { idToken } = req.body;
+
+        if (!idToken) {
+            return res.status(400).json({ success: false, error: "idToken is required" });
+        }
+
+        const verifyResult = await authService.verifyToken(idToken);
+
+        if (verifyResult.success) {
+            const userData = await databaseService.getUserData(verifyResult.uid);
+
+            if (userData) {
+                return res.status(200).json({ 
+                    success: true, 
+                    message: "Login verified successfully!", 
+                    profile: userData 
+                });
+            } else {
+                return res.status(404).json({ success: false, error: "User profile not found in database" });
+            }
+        } else {
+            return res.status(401).json({ success: false, error: "Invalid or expired token" });
+        }
+
+    } catch (error) {
+        console.error("Verify Login Error:", error);
+        res.status(500).json({ success: false, error: "An internal server error occurred" });
     }
 });
 
