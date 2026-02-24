@@ -115,5 +115,5 @@ app.post('/verify-login', async (req, res) => {
     }
 });
 
-const PORT = 3000;
+const PORT = 3001;
 app.listen(PORT, () => console.log(`Integration Server is running on port ${PORT}`));
