@@ -6,7 +6,7 @@ if (!admin.apps.length) {
         credential: admin.credential.cert(serviceAccount)
     });
 }
-//test
+
 const auth = admin.auth();
 
 const signUp = async (email, password) => {
@@ -56,6 +56,6 @@ const verifyToken = async (idToken) => {
         return { success: false, error: error.code };
     }
 };
+
  //signUp('test_key_working@yallaclass.com', 'password123'); //test code 
-// Export all functions for Person 4 (Integration)
 module.exports = { signUp,  getPasswordResetLink,  deleteUser,  verifyToken };
