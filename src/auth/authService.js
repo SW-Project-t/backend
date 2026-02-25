@@ -6,7 +6,7 @@ if (!admin.apps.length) {
         credential: admin.credential.cert(serviceAccount)
     });
 }
-
+//test
 const auth = admin.auth();
 
 const signUp = async (email, password) => {
