@@ -58,4 +58,5 @@ const verifyToken = async (idToken) => {
 };
 
  //signUp('test_key_working@yallaclass.com', 'password123'); //test code 
+ 
 module.exports = { signUp,  getPasswordResetLink,  deleteUser,  verifyToken };
