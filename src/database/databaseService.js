@@ -22,5 +22,44 @@ const getUserData = async (uid) => {
         throw new Error(error.message);
     }
 };
+//to call it by admin dashboard
+const getAllUsers = async () => {
+    try {
+        const usersSnapshot = await db.collection('users').get();
+        const usersList = [];
+        
+        usersSnapshot.forEach((doc) => {
+            usersList.push({ id: doc.id, ...doc.data() });
+        });
 
-module.exports = { saveUserToFirestore, getUserData };
+        return { success: true, users: usersList };
+    } catch (error) {
+        console.error("Error fetching all users:", error);
+        return { success: false, error: error.message };
+    }
+};
+//to delete user by admin dashboard
+const deleteUserFromFirestore = async (uid) => {
+    try {
+        await db.collection('users').doc(uid).delete();
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting user from Firestore:", error);
+        return { success: false, error: error.message };
+    }
+};
+//to update user by admin dashboard
+const updateUserInFirestore = async (uid, newData) => {
+    try {
+        await db.collection('users').doc(uid).update({
+            fullName: newData.fullName,
+            role: newData.role,
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating user in Firestore:", error);
+        return { success: false, error: error.message };
+    }
+};
+
+module.exports = { saveUserToFirestore, getUserData, getAllUsers, deleteUserFromFirestore , updateUserInFirestore };

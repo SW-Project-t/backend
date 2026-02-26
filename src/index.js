@@ -55,6 +55,32 @@ app.post('/admin/add-user', async (req, res) => {
         });
     }
 });
+//to call it by admin dashboard
+app.get('/admin/users', async (req, res) => {
+    try {
+        const result = await databaseService.getAllUsers();
+
+        if (result.success) {
+            return res.status(200).json({ 
+                success: true, 
+                message: "Users fetched successfully",
+                users: result.users //send the list of users to the frontend
+            });
+        } else {
+            return res.status(500).json({ 
+                success: false, 
+                error: "Failed to fetch users from database" 
+            });
+        }
+
+    } catch (error) {
+        console.error("Get All Users API Error:", error);
+        res.status(500).json({ 
+            success: false, 
+            error: "An internal server error occurred" 
+        });
+    }
+});
 // (password Reset)
 app.post('/reset-password', async (req, res) => {
     try {
@@ -112,6 +138,59 @@ app.post('/verify-login', async (req, res) => {
     } catch (error) {
         console.error("Verify Login Error:", error);
         res.status(500).json({ success: false, error: "An internal server error occurred" });
+    }
+});
+
+//delete path for admin dashboard to delete user from both auth and firestore
+app.delete('/admin/delete-user/:uid', async (req, res) => {
+    try {
+        const { uid } = req.params; 
+
+        const authDelete = await authService.deleteUser(uid);
+
+        if (authDelete.success) {
+            const dbDelete = await databaseService.deleteUserFromFirestore(uid);
+
+            if (dbDelete.success) {
+                return res.status(200).json({ 
+                    success: true, 
+                    message: "User deleted successfully from Auth and Firestore" 
+                });
+            }
+        }
+
+        res.status(400).json({ success: false, error: "Failed to delete user" });
+
+    } catch (error) {
+        res.status(500).json({ success: false, error: "Internal Server Error" });
+    }
+});
+//update path for admin dashboard to update user in firestore 
+app.put('/admin/update-user/:uid', async (req, res) => {
+    try {
+        const { uid } = req.params;
+        const updates = req.body; 
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                error: "No data provided to update" 
+            });
+        }
+
+        const result = await databaseService.updateUserInFirestore(uid, updates);
+
+        if (result.success) {
+            return res.status(200).json({ 
+                success: true, 
+                message: "User updated successfully" 
+            });
+        }
+        
+        res.status(400).json({ success: false, error: "Failed to update user" });
+    } catch (error) {
+        console.error("Update Error:", error);
+        res.status(500).json({ success: false, error: "Internal Server Error" });
     }
 });
 
