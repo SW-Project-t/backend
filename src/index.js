@@ -12,7 +12,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.post('/admin/add-user', async (req, res) => {
     try {
-        const { email, password, fullName, role } = req.body;
+        const { email, password, fullName, role,academicYear } = req.body;
 
         if (!email || !password) {
             return res.status(400).json({ 
@@ -27,7 +27,8 @@ app.post('/admin/add-user', async (req, res) => {
             const dbResult = await databaseService.saveUserToFirestore(authResult.uid, {
                 fullName,
                 role,
-                email
+                email,
+                academicYear
             });
 
             if (dbResult.success) {

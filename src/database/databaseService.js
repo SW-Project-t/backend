@@ -7,6 +7,7 @@ const saveUserToFirestore = async (uid, userData) => {
             role: userData.role, 
             email: userData.email,
             uid: uid,
+            academicYear: userData.academicYear,
             createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
         return { success: true };
@@ -54,6 +55,7 @@ const updateUserInFirestore = async (uid, newData) => {
         await db.collection('users').doc(uid).update({
             fullName: newData.fullName,
             role: newData.role,
+            academicYear: newData.academicYear
         });
         return { success: true };
     } catch (error) {
