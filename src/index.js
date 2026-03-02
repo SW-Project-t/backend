@@ -199,7 +199,6 @@ app.put('/admin/update-user/:uid', async (req, res) => {
 });
 app.get('/api/profile', verifyToken, async (req, res) => {
     try {
-        // بنستخدم req.user.uid اللي التيرمنال عندك طبعه
         const userData = await databaseService.getUserData(req.user.uid);
 
         if (userData) {
@@ -208,11 +207,10 @@ app.get('/api/profile', verifyToken, async (req, res) => {
                 profile: userData
             });
         } else {
-            // لو دخل هنا، يبقا الـ UID ده مش موجود في كولكشن users
             return res.status(404).json({
                 success: false,
                 error: "User profile not found",
-                debug_uid: req.user.uid // ده عشان تتأكد في Postman من الـ ID اللي بيدور عليه
+                debug_uid: req.user.uid 
             });
         }
     } catch (error) {
