@@ -18,9 +18,13 @@ const saveUserToFirestore = async (uid, userData) => {
 const getUserData = async (uid) => {
     try {
         const userDoc = await db.collection('users').doc(uid).get();
-        return userDoc.exists ? userDoc.data() : null;
+        if (!userDoc.exists) {
+            return null;
+        }
+        return userDoc.data();
     } catch (error) {
-        throw new Error(error.message);
+        console.error("Firestore Error:", error);
+        throw error;
     }
 };
 //to call it by admin dashboard
@@ -50,13 +54,9 @@ const deleteUserFromFirestore = async (uid) => {
     }
 };
 //to update user by admin dashboard
-const updateUserInFirestore = async (uid, newData) => {
+const updateUserInFirestore = async (uid, updates) => {
     try {
-        await db.collection('users').doc(uid).update({
-            fullName: newData.fullName,
-            role: newData.role,
-            academicYear: newData.academicYear
-        });
+        await db.collection('users').doc(uid).update(updates); 
         return { success: true };
     } catch (error) {
         console.error("Error updating user in Firestore:", error);

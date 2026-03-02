@@ -56,7 +56,17 @@ const verifyToken = async (idToken) => {
         return { success: false, error: error.code };
     }
 };
+const updateUserPassword = async (uid, newPassword) => {
+    try {
+        await admin.auth().updateUser(uid, {
+            password: newPassword
+        });
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
 
  //signUp('test_key_working@yallaclass.com', 'password123'); //test code 
  
-module.exports = { signUp,  getPasswordResetLink,  deleteUser,  verifyToken };
+module.exports = { signUp,  getPasswordResetLink,  deleteUser,  verifyToken , updateUserPassword};

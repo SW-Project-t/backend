@@ -3,6 +3,7 @@ const cors = require('cors'); //to make sure our API can be accessed from differ
 const bodyParser = require('body-parser');
 const authService = require('./auth/authService'); 
 const databaseService = require('./database/databaseService'); 
+const verifyToken = require('../middleware/authMiddleware');
 
 const app = express();
 
@@ -194,6 +195,67 @@ app.put('/admin/update-user/:uid', async (req, res) => {
     } catch (error) {
         console.error("Update Error:", error);
         res.status(500).json({ success: false, error: "Internal Server Error" });
+    }
+});
+app.get('/api/profile', verifyToken, async (req, res) => {
+    try {
+        // بنستخدم req.user.uid اللي التيرمنال عندك طبعه
+        const userData = await databaseService.getUserData(req.user.uid);
+
+        if (userData) {
+            return res.status(200).json({
+                success: true,
+                profile: userData
+            });
+        } else {
+            // لو دخل هنا، يبقا الـ UID ده مش موجود في كولكشن users
+            return res.status(404).json({
+                success: false,
+                error: "User profile not found",
+                debug_uid: req.user.uid // ده عشان تتأكد في Postman من الـ ID اللي بيدور عليه
+            });
+        }
+    } catch (error) {
+        console.error("Profile Error:", error);
+        res.status(500).json({ success: false, error: "Server Error" });
+    }
+});
+
+//update path for user dashboard to update him in firestore 
+app.put('/api/profile/update', verifyToken, async (req, res) => {
+    try {
+        const updates = req.body;
+        delete updates.email;
+        delete updates.uid;
+        delete updates.role;
+
+        const result = await databaseService.updateUserInFirestore(req.user.uid, updates);
+        if (result.success) {
+            res.status(200).json({ success: true, message: "Profile updated successfully" });
+        } else {
+            res.status(400).json(result);
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, error: "Update Error" });
+    }
+});
+// to make user change password
+app.put('/api/profile/update-password', verifyToken, async (req, res) => {
+    try {
+        const { newPassword } = req.body;
+
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ success: false, error: "Password must be at least 6 characters" });
+        }
+        const result = await authService.updateUserPassword(req.user.uid, newPassword);
+
+        if (result.success) {
+            res.status(200).json({ success: true, message: "Password updated successfully!" });
+        } else {
+            res.status(400).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, error: "Password Update Error" });
     }
 });
 
