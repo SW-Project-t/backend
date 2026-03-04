@@ -13,6 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.post('/admin/add-user', async (req, res) => {
     try {
+        console.log("Data received from Frontend:", req.body);
         const { email, password, fullName, role,academicYear,...userData } = req.body;
 
         if (!email || !password) {
