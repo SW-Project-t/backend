@@ -21,6 +21,12 @@ app.post('/admin/add-user', async (req, res) => {
                 error: "Email and password are required" 
             });
         }
+        if (!fullName || !role || !academicYear) {
+        return res.status(400).json({ 
+        success: false, 
+        error: "Full name, role, and academic year are required" 
+    });
+}
 
         const authResult = await authService.signUp(email, password);
 

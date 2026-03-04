@@ -3,11 +3,7 @@ const db = admin.firestore();
 const saveUserToFirestore = async (uid, userData) => {
     try {
         await db.collection('users').doc(uid).set({
-            fullName: userData.fullName,
-            role: userData.role, 
-            email: userData.email,
             uid: uid,
-            academicYear: userData.academicYear,
             ...userData,
             createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
