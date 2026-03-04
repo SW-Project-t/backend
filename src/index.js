@@ -14,31 +14,27 @@ app.use(express.urlencoded({ extended: true }));
 app.post('/admin/add-user', async (req, res) => {
     try {
         console.log("Data received from Frontend:", req.body);
-        const { email, password, fullName, role,academicYear,...userData } = req.body;
+        const { email, password, fullName, role, academicYear, ...userData } = req.body;
 
         if (!email || !password) {
-            return res.status(400).json({ 
-                success: false, 
-                error: "Email and password are required" 
-            });
+            return res.status(400).json({ success: false, error: "Email and password are required" });
         }
         if (!fullName || !role || !academicYear) {
-        return res.status(400).json({ 
-        success: false, 
-        error: "Full name, role, and academic year are required" 
-    });
-}
+            return res.status(400).json({ success: false, error: "Full name, role, and academic year are required" });
+        }
 
         const authResult = await authService.signUp(email, password);
 
         if (authResult.success) {
-            const dbResult = await databaseService.saveUserToFirestore(authResult.uid, {
+            const finalProfileData = {
                 fullName,
                 role,
                 email,
                 academicYear,
-                ...userData
-            });
+                ...userData  
+            };
+
+            const dbResult = await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
 
             if (dbResult.success) {
                 return res.status(201).json({ 
@@ -52,14 +48,15 @@ app.post('/admin/add-user', async (req, res) => {
                 });
             }
         }
-        res.status(400).json({ 
+
+        return res.status(400).json({ 
             success: false, 
             error: authResult.error 
         });
 
     } catch (error) {
         console.error("Internal Server Error:", error);
-        res.status(500).json({ 
+        return res.status(500).json({ 
             success: false, 
             error: "An internal server error occurred" 
         });
