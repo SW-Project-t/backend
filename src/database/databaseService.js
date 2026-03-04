@@ -8,6 +8,7 @@ const saveUserToFirestore = async (uid, userData) => {
             email: userData.email,
             uid: uid,
             academicYear: userData.academicYear,
+            ...userData,
             createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
         return { success: true };

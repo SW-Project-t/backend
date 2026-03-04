@@ -13,7 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.post('/admin/add-user', async (req, res) => {
     try {
-        const { email, password, fullName, role,academicYear } = req.body;
+        const { email, password, fullName, role,academicYear,...userData } = req.body;
 
         if (!email || !password) {
             return res.status(400).json({ 
@@ -29,7 +29,8 @@ app.post('/admin/add-user', async (req, res) => {
                 fullName,
                 role,
                 email,
-                academicYear
+                academicYear,
+                ...userData
             });
 
             if (dbResult.success) {
