@@ -264,6 +264,53 @@ app.put('/api/profile/update-password', verifyToken, async (req, res) => {
         res.status(500).json({ success: false, error: "Password Update Error" });
     }
 });
+// view all courses available for the student
+app.get('/api/all-courses', verifyToken, async (req, res) => {
+    try {
+        const result = await databaseService.getAllAvailableCourses();
+
+        if (result.success) {
+            return res.status(200).json({
+                success: true,
+                courses: result.courses
+            });
+        } else {
+            return res.status(500).json({ success: false, error: "Failed to fetch courses" });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, error: "Internal Server Error" });
+    }
+});
+// to make admin add new course
+app.post('/admin/add-course', verifyToken, async (req, res) => {
+   if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, error: "Forbidden: Admins only" });
+    }
+    try {
+        const courseData = req.body;
+
+        if (!courseData.title || !courseData.academicYear) {
+            return res.status(400).json({ 
+                success: false, 
+                error: "Course title and academic year are required" 
+            });
+        }
+        const result = await databaseService.addCourse(courseData);
+
+        if (result.success) {
+            return res.status(201).json({ 
+                success: true, 
+                message: "Course created successfully!", 
+                courseId: result.id 
+            });
+        } else {
+            return res.status(500).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        console.error("Add Course Error:", error);
+        res.status(500).json({ success: false, error: "Internal Server Error" });
+    }
+});
 
 const PORT = 3001;
 app.listen(PORT, () => console.log(`Integration Server is running on port ${PORT}`));

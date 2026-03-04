@@ -60,5 +60,49 @@ const updateUserInFirestore = async (uid, updates) => {
         return { success: false, error: error.message };
     }
 };
+// to add new course by admin dashboard
+const addCourse = async (courseData) => {
+    try {
+        const docRef = db.collection('courses').doc(); 
+        
+        const newCourse = {
+            courseId: docRef.id,
+            title: courseData.title,
+            description: courseData.description,
+            instructorName: courseData.instructorName,
+            price: courseData.price,
+            academicYear: courseData.academicYear, 
+            thumbnail: courseData.thumbnail || "", 
+            isPublished: courseData.isPublished ?? true, 
+            studentsCount: 0, 
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        };
 
-module.exports = { saveUserToFirestore, getUserData, getAllUsers, deleteUserFromFirestore , updateUserInFirestore };
+        await docRef.set(newCourse);
+        return { success: true, id:Ref.id };
+    } catch (error) {
+        console.error("Error adding course: ", error);
+        return { success: false, error: error.message };
+    }
+};
+// to view the available courses for the students
+const getAllAvailableCourses = async () => {
+    try {
+        const snapshot = await db.collection('courses')
+            .where('isPublished', '==', true) 
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        const courses = [];
+        snapshot.forEach(doc => {
+            courses.push(doc.data());
+        });
+
+        return { success: true, courses };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
+
+
+module.exports = { saveUserToFirestore, getUserData, getAllUsers, deleteUserFromFirestore , updateUserInFirestore,addCourse,getAllAvailableCourses };
