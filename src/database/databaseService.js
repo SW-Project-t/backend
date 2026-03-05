@@ -67,19 +67,19 @@ const addCourse = async (courseData) => {
         
         const newCourse = {
             courseId: docRef.id,
-            title: courseData.title,
-            description: courseData.description,
+            courseName: courseData.courseName,
             instructorName: courseData.instructorName,
-            price: courseData.price,
-            academicYear: courseData.academicYear, 
-            thumbnail: courseData.thumbnail || "", 
+            SelectDays: courseData.SelectDays,
+            Time: courseData.Time,
+            RoomNumber: courseData.RoomNumber,
+            capacity: courseData.capacity, 
             isPublished: courseData.isPublished ?? true, 
             studentsCount: 0, 
             createdAt: admin.firestore.FieldValue.serverTimestamp()
         };
 
         await docRef.set(newCourse);
-        return { success: true, id:Ref.id };
+        return { success: true, id:docRef.id };
     } catch (error) {
         console.error("Error adding course: ", error);
         return { success: false, error: error.message };
