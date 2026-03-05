@@ -135,8 +135,8 @@ app.post('/verify-login', async (req, res) => {
                 return res.status(200).json({ 
                     success: true, 
                     message: "Login verified successfully!", 
-                    profile: userData ,
-                    token: idToken
+                    token: idToken,
+                    profile: userData 
                 });
             } else {
                 return res.status(404).json({ success: false, error: "User profile not found in database" });
