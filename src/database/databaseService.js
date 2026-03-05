@@ -73,8 +73,6 @@ const addCourse = async (courseData) => {
             Time: courseData.Time,
             RoomNumber: courseData.RoomNumber,
             capacity: courseData.capacity, 
-            isPublished: courseData.isPublished ?? true, 
-            studentsCount: 0, 
             createdAt: admin.firestore.FieldValue.serverTimestamp()
         };
 
