@@ -286,10 +286,10 @@ app.post('/admin/add-course', verifyToken, async (req, res) => {
     try {
         const courseData = req.body;
 
-        if (!courseData.courseName || !courseData.instructorName) {
+        if (!courseData.courseName || !courseData.instructorName || !courseData.courseId) {
             return res.status(400).json({ 
                 success: false, 
-                error: "Course name and instructor name are required" 
+                error: "Course name,Id and instructor name  are required" 
             });
         }
         const result = await databaseService.addCourse(courseData);

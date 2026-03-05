@@ -66,7 +66,7 @@ const addCourse = async (courseData) => {
         const docRef = db.collection('courses').doc(); 
         
         const newCourse = {
-            courseId: docRef.id,
+            courseId: courseData.courseId,
             courseName: courseData.courseName,
             instructorName: courseData.instructorName,
             SelectDays: courseData.SelectDays,
@@ -79,7 +79,11 @@ const addCourse = async (courseData) => {
         };
 
         await docRef.set(newCourse);
-        return { success: true, id:docRef.id };
+        return { 
+            success: true, 
+            docId: docRef.id,          
+            courseId: newCourse.courseId  
+        };
     } catch (error) {
         console.error("Error adding course: ", error);
         return { success: false, error: error.message };
