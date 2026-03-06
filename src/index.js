@@ -349,6 +349,16 @@ app.post('/api/profile/upload-image', verifyToken, upload.single('image'), async
         res.status(500).json({ success: false, error: "An error occurred during image upload" });
     }
 });
+app.post('/api/enroll-course', async (req, res) => {
+    const { studentUid, courseId } = req.body;
+    const result = await databaseService.enrollStudentInCourse(studentUid, courseId);
+    
+    if (result.success) {
+        res.status(200).json(result);
+    } else {
+        res.status(500).json(result);
+    }
+});
 
 const PORT = 3001;
 app.listen(PORT, () => console.log(`Integration Server is running on port ${PORT}`));

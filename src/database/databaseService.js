@@ -105,6 +105,36 @@ const getAllAvailableCourses = async () => {
         return { success: false, error: error.message };
     }
 };
+const enrollStudentInCourse = async (studentUid, courseId) => {
+    try {
+        const enrollmentRef = db.collection('enrollments').doc();
+        const courseQuery = await db.collection('courses').where('courseId', '==', courseId).get();
+
+        if (courseQuery.empty) throw new Error("Course not found");
+
+        const courseDoc = courseQuery.docs[0];
+        const courseRef = courseDoc.ref;
+
+        // استخدام Transaction لضمان زيادة العدد بدقة
+        await db.runTransaction(async (transaction) => {
+            transaction.set(enrollmentRef, {
+                studentUid,
+                courseId,
+                enrolledAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+            // زيادة عداد الطلاب في الكورس بمقدار 1
+            transaction.update(courseRef, {
+                studentsCount: admin.firestore.FieldValue.increment(1)
+            });
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error("Enrollment error:", error);
+        return { success: false, error: error.message };
+    }
+};
 
 
-module.exports = { saveUserToFirestore, getUserData, getAllUsers, deleteUserFromFirestore , updateUserInFirestore,addCourse,getAllAvailableCourses };
+
+module.exports = { saveUserToFirestore, getUserData, getAllUsers, deleteUserFromFirestore , updateUserInFirestore,addCourse,getAllAvailableCourses,enrollStudentInCourse };
