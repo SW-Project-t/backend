@@ -4,10 +4,13 @@ const bodyParser = require('body-parser');
 const authService = require('./auth/authService'); 
 const databaseService = require('./database/databaseService'); 
 const verifyToken = require('../middleware/authMiddleware');
-
 const app = express();
+const multer = require('multer');
+const { getStorage } = require('firebase-admin/storage');
+const upload = multer({ storage: multer.memoryStorage() });
+const bucket = getStorage().bucket("yallaclass-5cc62.appspot.com");
 
-app.use(cors());//to allow cross-origin requests from our frontend (React app)
+app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
 
@@ -243,6 +246,7 @@ app.put('/api/profile/update', verifyToken, async (req, res) => {
         res.status(500).json({ success: false, error: "Update Error" });
     }
 });
+
 // to make user change password
 app.put('/api/profile/update-password', verifyToken, async (req, res) => {
     try {
@@ -307,6 +311,42 @@ app.post('/admin/add-course', verifyToken, async (req, res) => {
     } catch (error) {
         console.error("Add Course Error:", error);
         res.status(500).json({ success: false, error: "Internal Server Error" });
+    }
+});
+// Route to handle profile picture upload and persistence
+app.post('/api/profile/upload-image', verifyToken, upload.single('image'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, error: "No image file provided" });
+        }
+
+        const uid = req.user.uid; 
+        const fileName = `profile_pics/${uid}.jpg`; 
+        const file = bucket.file(fileName);
+
+        await file.save(req.file.buffer, {
+            contentType: req.file.mimetype,
+            metadata: { cacheControl: 'public, max-age=31536000' }
+        });
+
+        await file.makePublic();
+        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+
+        const dbResult = await databaseService.updateUserInFirestore(uid, { profilePic: publicUrl });
+
+        if (dbResult.success) {
+            res.status(200).json({ 
+                success: true, 
+                message: "Profile picture updated successfully!",
+                profilePic: publicUrl 
+            });
+        } else {
+            res.status(500).json({ success: false, error: "Failed to save image link to database" });
+        }
+
+    } catch (error) {
+        console.error("Upload Error:", error);
+        res.status(500).json({ success: false, error: "An error occurred during image upload" });
     }
 });
 
