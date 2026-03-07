@@ -115,14 +115,12 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
         const courseDoc = courseQuery.docs[0];
         const courseRef = courseDoc.ref;
 
-        // استخدام Transaction لضمان زيادة العدد بدقة
         await db.runTransaction(async (transaction) => {
             transaction.set(enrollmentRef, {
                 studentUid,
                 courseId,
                 enrolledAt: admin.firestore.FieldValue.serverTimestamp()
             });
-            // زيادة عداد الطلاب في الكورس بمقدار 1
             transaction.update(courseRef, {
                 studentsCount: admin.firestore.FieldValue.increment(1)
             });
