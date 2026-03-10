@@ -9,10 +9,11 @@ const multer = require('multer');
 const { getStorage } = require('firebase-admin/storage');
 const upload = multer({ storage: multer.memoryStorage() });
 const bucket = getStorage().bucket("yallaclass-5cc62.appspot.com");
-
 app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
+const admin = require('firebase-admin'); 
+const { sendRiskAlertToUser } = require('./notificationService'); 
 
 app.post('/admin/add-user', async (req, res) => {
     try {
@@ -357,6 +358,34 @@ app.post('/api/enroll-course', async (req, res) => {
         res.status(200).json(result);
     } else {
         res.status(500).json(result);
+    }
+});
+
+// API to update attendance risk and send alert
+app.post('/api/attendance/update-risk',verifyToken, async (req, res) => {
+    try {
+        const { uid, riskLevel } = req.body; 
+
+        if (!uid || !riskLevel) {
+            return res.status(400).json({ success: false, error: "Student UID and riskLevel are required" });
+        }
+
+        const dbResult = await databaseService.updateUserInFirestore(uid, { riskLevel: riskLevel });
+
+        if (!dbResult.success) {
+            return res.status(500).json({ success: false, error: "Failed to update database" });
+        }
+
+        await sendRiskAlertToUser(uid, riskLevel);
+
+        res.status(200).json({ 
+            success: true, 
+            message: "Risk level updated and alert sent successfully." 
+        });
+
+    } catch (error) {
+        console.error("Risk Update Error:", error);
+        res.status(500).json({ success: false, error: "Failed to update risk or send alert." });
     }
 });
 
