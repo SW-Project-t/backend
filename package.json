@@ -19,10 +19,14 @@
   },
   "homepage": "https://github.com/OS-Project-t/backend#readme",
   "dependencies": {
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
     "body-parser": "^2.2.2",
     "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "firebase-admin": "^13.7.0",
-    "multer": "^2.1.1"
+    "firebase-admin": "^10.3.0",
+    "multer": "^2.1.1",
+    "nodemailer": "^8.0.2"
   }
 }

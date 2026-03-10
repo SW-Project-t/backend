@@ -41,9 +41,14 @@ app.post('/admin/add-user', async (req, res) => {
             const dbResult = await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
 
             if (dbResult.success) {
+                
+                // --- هنا ضفنا جزء الإيميل ---
+                await databaseService.sendWelcomeEmail(email, fullName, password);
+                // --------------------------
+
                 return res.status(201).json({ 
                     success: true, 
-                    message: "User registered and profile created successfully!" 
+                    message: "User registered, profile created, and email sent!" 
                 });
             } else {
                 return res.status(500).json({ 
@@ -388,6 +393,16 @@ app.post('/api/attendance/update-risk',verifyToken, async (req, res) => {
         res.status(500).json({ success: false, error: "Failed to update risk or send alert." });
     }
 });
+async function handleAddUser(req, res) {
+    const { name, email, password, role } = req.body;
+    const result = await databaseService.addUserAndSendEmail({ name, email, password, role });
+
+    if (result.success) {
+        res.status(200).json({ message: result.message });
+    } else {
+        res.status(400).json({ message: result.message });
+    }
+}
 
 const PORT = 3001;
 app.listen(PORT, () => console.log(`Integration Server is running on port ${PORT}`));
