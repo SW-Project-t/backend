@@ -83,23 +83,38 @@ app.post('/admin/add-users-bulk', async (req, res) => {
         const results = []; 
 
         for (const user of users) {
-            const { email, password, fullName, role, academicYear } = user;
+            
+            const { email, password, fullName, role, academicYear, department, code, phoneNumber } = user;
 
             if (!email || !password || !fullName) {
                 results.push({ email: email || 'missing', success: false, error: "Missing data" });
-                continue; 
+                continue;
             }
 
             try {
-            
+
                 const authResult = await authService.signUp(email, password);
+
                 if (authResult.success) {
-                    const finalProfileData = { fullName, role: role || 'student', email, academicYear: academicYear || 'N/A' };
+                    
+                    const finalProfileData = { 
+                        fullName, 
+                        role: role || 'student', 
+                        email, 
+                        academicYear: academicYear || 'N/A',
+                        department: department || '',      
+                        code: code || '',                  
+                        phoneNumber: phoneNumber || ''      
+                    };
+
                     await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
+
+    
                     await databaseService.sendWelcomeEmail(email, fullName, password);
 
                     results.push({ email, success: true });
                 } else {
+                
                     results.push({ email, success: false, error: authResult.error });
                 }
             } catch (err) {
