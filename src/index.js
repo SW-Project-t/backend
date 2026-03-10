@@ -71,6 +71,53 @@ app.post('/admin/add-user', async (req, res) => {
         });
     }
 });
+// Bulk Add Users Endpoint
+app.post('/admin/add-users-bulk', async (req, res) => {
+    try {
+        const users = req.body.users; 
+
+        if (!Array.isArray(users) || users.length === 0) {
+            return res.status(400).json({ success: false, error: "Please provide an array of users" });
+        }
+
+        const results = []; 
+
+        for (const user of users) {
+            const { email, password, fullName, role, academicYear } = user;
+
+            if (!email || !password || !fullName) {
+                results.push({ email: email || 'missing', success: false, error: "Missing data" });
+                continue; 
+            }
+
+            try {
+            
+                const authResult = await authService.signUp(email, password);
+                if (authResult.success) {
+                    const finalProfileData = { fullName, role: role || 'student', email, academicYear: academicYear || 'N/A' };
+                    await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
+                    await databaseService.sendWelcomeEmail(email, fullName, password);
+
+                    results.push({ email, success: true });
+                } else {
+                    results.push({ email, success: false, error: authResult.error });
+                }
+            } catch (err) {
+                results.push({ email, success: false, error: err.message });
+            }
+        }
+
+        res.status(200).json({ 
+            message: "Bulk process completed", 
+            totalProcessed: users.length,
+            results: results 
+        });
+
+    } catch (error) {
+        console.error("Bulk Add Error:", error);
+        res.status(500).json({ success: false, error: "Internal Server Error" });
+    }
+});
 //to call it by admin dashboard
 app.get('/admin/users', async (req, res) => {
     try {
