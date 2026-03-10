@@ -366,6 +366,53 @@ app.post('/admin/add-course', verifyToken, async (req, res) => {
         res.status(500).json({ success: false, error: "Internal Server Error" });
     }
 });
+// Bulk Add Courses Endpoint
+app.post('/admin/add-courses-bulk', verifyToken, async (req, res) => {
+    
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, error: "Forbidden: Admins only" });
+    }
+
+    try {
+        const courses = req.body.courses; 
+
+        if (!Array.isArray(courses) || courses.length === 0) {
+            return res.status(400).json({ success: false, error: "Please provide an array of courses" });
+        }
+
+        const results = []; 
+        for (const course of courses) {
+        
+            if (!course.courseName || !course.instructorName || !course.courseId) {
+                results.push({ courseId: course.courseId || 'missing', success: false, error: "Missing required fields" });
+                continue;
+            }
+
+            try {
+            
+                const result = await databaseService.addCourse(course);
+
+                if (result.success) {
+                    results.push({ courseId: course.courseId, success: true });
+                } else {
+                    results.push({ courseId: course.courseId, success: false, error: result.error });
+                }
+            } catch (err) {
+                results.push({ courseId: course.courseId, success: false, error: err.message });
+            }
+        }
+
+        res.status(200).json({ 
+            message: "Bulk courses process completed", 
+            totalProcessed: courses.length,
+            results: results 
+        });
+
+    } catch (error) {
+        console.error("Bulk Add Courses Error:", error);
+        res.status(500).json({ success: false, error: "Internal Server Error" });
+    }
+});
 // Route to handle profile picture upload and persistence
 app.post('/api/profile/upload-image', verifyToken, upload.single('image'), async (req, res) => {
     try {
