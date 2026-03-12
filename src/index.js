@@ -10,6 +10,7 @@ const multer = require('multer');
 const { getStorage } = require('firebase-admin/storage');
 const upload = multer({ storage: multer.memoryStorage() });
 const bucket = getStorage().bucket("yallaclass-5cc62.appspot.com");
+const { analyzeStudentRisk } = require('./aiService');
 
 app.use(cors());
 app.use(express.json()); 
@@ -520,6 +521,35 @@ app.post('/api/attendance/update-risk',verifyToken, async (req, res) => {
     } catch (error) {
         console.error("Risk Update Error:", error);
         res.status(500).json({ success: false, error: "Failed to update risk or send alert." });
+    }
+});
+// API: Analyze Student Risk using AI
+app.post('/api/analyze-risk/:uid', async (req, res) => {
+    try {
+        const { uid } = req.params;
+
+        const studentData = await databaseService.getUserData(uid);
+
+        if (!studentData) {
+            return res.status(404).json({ success: false, error: "Student not found" });
+        }
+
+        const analysis = await analyzeStudentRisk(studentData);
+
+        await databaseService.updateUserInFirestore(uid, { 
+            riskLevel: analysis.riskLevel,
+            riskExplanation: analysis.explanation 
+        });
+
+        res.status(200).json({ 
+            success: true, 
+            message: "Risk analysis completed",
+            analysis: analysis 
+        });
+
+    } catch (error) {
+        console.error("Risk Analysis Error:", error);
+        res.status(500).json({ success: false, error: "Internal Server Error" });
     }
 });
 
