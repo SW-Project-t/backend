@@ -81,7 +81,7 @@ app.post('/admin/add-user', async (req, res) => {
         });
     }
 });
-
+// Bulk Add Users Endpoint
 app.post('/admin/add-users-bulk', async (req, res) => {
     try {
         const users = req.body.users; 
@@ -93,7 +93,7 @@ app.post('/admin/add-users-bulk', async (req, res) => {
         const results = []; 
 
         for (const user of users) {
-            const { email, password, fullName, role, academicYear, department, code, phoneNumber } = user;
+            const { email, password, fullName, role, academicYear, department, code, phoneNumber,gpa } = user;
 
             if (!email || !password || !fullName) {
                 results.push({ email: email || 'missing', success: false, error: "Missing data" });
@@ -111,11 +111,11 @@ app.post('/admin/add-users-bulk', async (req, res) => {
                         academicYear: academicYear || 'N/A',
                         department: department || '',      
                         code: code || '',                  
-                        phoneNumber: phoneNumber || ''      
+                        phoneNumber: phoneNumber || '',
+                        gpa: gpa || null 
                     };
 
                     await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
-
                     await databaseService.sendWelcomeEmail(email, fullName, password);
 
                     results.push({ email, success: true });
