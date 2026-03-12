@@ -1,5 +1,4 @@
 require('dotenv').config();
-const bcrypt = require('bcryptjs');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 
@@ -71,6 +70,7 @@ const getAllUsers = async () => {
 const deleteUserFromFirestore = async (uid) => {
     try {
         await db.collection('users').doc(uid).delete();
+        console.log(`User ${uid} deleted from Firestore`);
         return { success: true };
     } catch (error) {
         console.error("Error deleting user from Firestore:", error);
@@ -161,53 +161,6 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
     }
 };
 
-async function addUserAndSendEmail(userData) {
-    const { name, email, password, role } = userData;
-
-    try {
-        const userExists = await checkUserExists(email); 
-        if (userExists) {
-            return { success: false, message: 'User already exists' };
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const uid = db.collection('users').doc().id; 
-        
-        await db.collection('users').doc(uid).set({
-            name: name,
-            email: email,
-            password: hashedPassword,
-            role: role,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'Welcome to the System - Your Account Details',
-            html: `
-                <h3>Hello ${name},</h3>
-                <p>Your account has been created by the Admin.</p>
-                <p>Here are your login details:</p>
-                <ul>
-                    <li><strong>Email:</strong> ${email}</li>
-                    <li><strong>Password:</strong> ${password}</li>
-                </ul>
-                <p>Please login and change your password immediately for security reasons.</p>
-            `
-        };
-
-        await transporter.sendMail(mailOptions);
-        console.log(`Email sent successfully to ${email}`);
-
-        return { success: true, message: 'User added and email sent!' };
-
-       } catch (error) {
-        console.error('Error adding user:', error); 
-        return { success: false, message: 'Error adding user', error: error.message }; 
-    }
-}
-
 const sendWelcomeEmail = async (email, name, password) => {
     try {
         const mailOptions = {
@@ -234,6 +187,7 @@ const sendWelcomeEmail = async (email, name, password) => {
         return { success: false, error: error.message };
     }
 };
+
 module.exports = { 
     saveUserToFirestore, 
     getUserData, 
