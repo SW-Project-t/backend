@@ -21,7 +21,9 @@ const { sendRiskAlertToUser } = require('./notificationService');
 app.post('/admin/add-user', async (req, res) => {
     try {
         console.log("Data received from Frontend:", req.body);
-        const { email, password, fullName, role, academicYear, ...userData } = req.body;
+        
+        
+        const { email, password, fullName, role, academicYear, code, ...userData } = req.body;
 
         if (!email || !password) {
             return res.status(400).json({ success: false, error: "Email and password are required" });
@@ -30,7 +32,11 @@ app.post('/admin/add-user', async (req, res) => {
             return res.status(400).json({ success: false, error: "Full name, role, and academic year are required" });
         }
 
-        // 1. Create user in Firebase Auth
+        
+        if (code && !/^[a-zA-Z0-9-]+$/.test(code)) {
+            return res.status(400).json({ success: false, error: "Student code must be letters and numbers only" });
+        }
+
         const authResult = await authService.signUp(email, password);
 
         if (authResult.success) {
@@ -39,6 +45,7 @@ app.post('/admin/add-user', async (req, res) => {
                 role,
                 email,
                 academicYear,
+                code, 
                 ...userData  
             };
 
