@@ -2,7 +2,8 @@ const { OpenAI } = require('openai');
 require('dotenv').config();
 
 const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.GROQ_API_KEY,
+    baseURL: 'https://api.groq.com/openai/v1',
 });
 
 const analyzeStudentRisk = async (studentData) => {
@@ -10,7 +11,7 @@ const analyzeStudentRisk = async (studentData) => {
         const prompt = `
             You are an AI student risk analysis system.
             Analyze the following student data and determine the risk level (Low, Medium, High).
-            Also provide a brief explanation for the risk level in Arabic.
+            Also provide a brief explanation for the risk level in English.
 
             Student Data:
             - Name: ${studentData.fullName}
@@ -22,12 +23,12 @@ const analyzeStudentRisk = async (studentData) => {
             Return the result in JSON format exactly like this:
             {
                 "riskLevel": "High",
-                "explanation": "السبب بالعربي هنا"
+                "explanation": "The reason here in English"
             }
         `;
 
         const completion = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo", // or gpt-4
+            model: "llama-3.1-8b-instant", 
             messages: [
                 { role: "system", content: "You are a helpful assistant designed to output JSON." },
                 { role: "user", content: prompt }
@@ -41,7 +42,7 @@ const analyzeStudentRisk = async (studentData) => {
 
     } catch (error) {
         console.error("AI Analysis Error:", error.message);
-        return { riskLevel: "Unknown", explanation: "Could not analyze data" };
+        return { riskLevel: "Unknown", explanation: "Could not analyze data due to an error." };
     }
 };
 
