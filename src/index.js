@@ -49,11 +49,9 @@ app.post('/admin/add-user', async (req, res) => {
                 ...userData  
             };
 
-            // 2. Save user data to Firestore using the Auth UID
             const dbResult = await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
 
             if (dbResult.success) {
-                // 3. Send Welcome Email
                 await databaseService.sendWelcomeEmail(email, fullName, password);
 
                 return res.status(201).json({ 
@@ -61,8 +59,7 @@ app.post('/admin/add-user', async (req, res) => {
                     message: "User registered, profile created, and email sent!" 
                 });
             } else {
-                // Optional: Should ideally delete the Auth user if DB save fails to keep consistency
-                // await authService.deleteUser(authResult.uid); 
+                 
                 return res.status(500).json({ 
                     success: false, 
                     error: "Account created, but failed to save profile to Firestore" 
@@ -84,7 +81,6 @@ app.post('/admin/add-user', async (req, res) => {
     }
 });
 
-// API: Bulk Add Users
 app.post('/admin/add-users-bulk', async (req, res) => {
     try {
         const users = req.body.users; 
@@ -104,7 +100,6 @@ app.post('/admin/add-users-bulk', async (req, res) => {
             }
 
             try {
-                // 1. Create in Auth
                 const authResult = await authService.signUp(email, password);
 
                 if (authResult.success) {
@@ -118,10 +113,8 @@ app.post('/admin/add-users-bulk', async (req, res) => {
                         phoneNumber: phoneNumber || ''      
                     };
 
-                    // 2. Save to Firestore
                     await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
 
-                    // 3. Send Email
                     await databaseService.sendWelcomeEmail(email, fullName, password);
 
                     results.push({ email, success: true });
