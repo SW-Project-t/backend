@@ -1,5 +1,31 @@
+require('dotenv').config();
+const bcrypt = require('bcryptjs');
 const admin = require('firebase-admin');
+const nodemailer = require('nodemailer');
+
 const db = admin.firestore();
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    },
+    tls: {
+        rejectUnauthorized: false 
+    }
+});
+
+const checkUserExists = async (email) => {
+    try {
+        const snapshot = await db.collection('users').where('email', '==', email).get();
+        return !snapshot.empty;
+    } catch (error) {
+        console.error("Error checking user:", error);
+        return false;
+    }
+};
+
 const saveUserToFirestore = async (uid, userData) => {
     try {
         await db.collection('users').doc(uid).set({
@@ -12,6 +38,7 @@ const saveUserToFirestore = async (uid, userData) => {
         return { success: false, error: error.message };
     }
 };
+
 const getUserData = async (uid) => {
     try {
         const userDoc = await db.collection('users').doc(uid).get();
@@ -24,7 +51,7 @@ const getUserData = async (uid) => {
         throw error;
     }
 };
-//to call it by admin dashboard
+
 const getAllUsers = async () => {
     try {
         const usersSnapshot = await db.collection('users').get();
@@ -40,7 +67,7 @@ const getAllUsers = async () => {
         return { success: false, error: error.message };
     }
 };
-//to delete user by admin dashboard
+
 const deleteUserFromFirestore = async (uid) => {
     try {
         await db.collection('users').doc(uid).delete();
@@ -50,7 +77,7 @@ const deleteUserFromFirestore = async (uid) => {
         return { success: false, error: error.message };
     }
 };
-//to update user by admin dashboard
+
 const updateUserInFirestore = async (uid, updates) => {
     try {
         await db.collection('users').doc(uid).update(updates); 
@@ -60,7 +87,7 @@ const updateUserInFirestore = async (uid, updates) => {
         return { success: false, error: error.message };
     }
 };
-// to add new course by admin dashboard
+
 const addCourse = async (courseData) => {
     try {
         const docRef = db.collection('courses').doc(); 
@@ -87,7 +114,7 @@ const addCourse = async (courseData) => {
         return { success: false, error: error.message };
     }
 };
-// to view the available courses for the students
+
 const getAllAvailableCourses = async () => {
     try {
         const snapshot = await db.collection('courses')
@@ -105,6 +132,7 @@ const getAllAvailableCourses = async () => {
         return { success: false, error: error.message };
     }
 };
+
 const enrollStudentInCourse = async (studentUid, courseId) => {
     try {
         const enrollmentRef = db.collection('enrollments').doc();
@@ -133,6 +161,87 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
     }
 };
 
+async function addUserAndSendEmail(userData) {
+    const { name, email, password, role } = userData;
 
+    try {
+        const userExists = await checkUserExists(email); 
+        if (userExists) {
+            return { success: false, message: 'User already exists' };
+        }
 
-module.exports = { saveUserToFirestore, getUserData, getAllUsers, deleteUserFromFirestore , updateUserInFirestore,addCourse,getAllAvailableCourses,enrollStudentInCourse };
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const uid = db.collection('users').doc().id; 
+        
+        await db.collection('users').doc(uid).set({
+            name: name,
+            email: email,
+            password: hashedPassword,
+            role: role,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Welcome to the System - Your Account Details',
+            html: `
+                <h3>Hello ${name},</h3>
+                <p>Your account has been created by the Admin.</p>
+                <p>Here are your login details:</p>
+                <ul>
+                    <li><strong>Email:</strong> ${email}</li>
+                    <li><strong>Password:</strong> ${password}</li>
+                </ul>
+                <p>Please login and change your password immediately for security reasons.</p>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`Email sent successfully to ${email}`);
+
+        return { success: true, message: 'User added and email sent!' };
+
+       } catch (error) {
+        console.error('Error adding user:', error); 
+        return { success: false, message: 'Error adding user', error: error.message }; 
+    }
+}
+
+const sendWelcomeEmail = async (email, name, password) => {
+    try {
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Welcome to the System - Your Account Details',
+            html: `
+                <h3>Hello ${name},</h3>
+                <p>Your account has been created by the Admin.</p>
+                <p>Here are your login details:</p>
+                <ul>
+                    <li><strong>Email:</strong> ${email}</li>
+                    <li><strong>Password:</strong> ${password}</li>
+                </ul>
+                <p>Please login and change your password immediately for security reasons.</p>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`Email sent successfully to ${email}`);
+        return { success: true };
+    } catch (error) {
+        console.error('Error sending email:', error);
+        return { success: false, error: error.message };
+    }
+};
+module.exports = { 
+    saveUserToFirestore, 
+    getUserData, 
+    getAllUsers, 
+    deleteUserFromFirestore, 
+    updateUserInFirestore,
+    addCourse,
+    getAllAvailableCourses,
+    enrollStudentInCourse,
+    sendWelcomeEmail  
+};
