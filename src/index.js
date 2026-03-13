@@ -1,5 +1,6 @@
+require('dotenv').config();
 const express = require('express');
-const cors = require('cors'); //to make sure our API can be accessed from different origins (like our frontend)
+const cors = require('cors');
 const bodyParser = require('body-parser');
 const authService = require('./auth/authService'); 
 const databaseService = require('./database/databaseService'); 
@@ -9,22 +10,32 @@ const multer = require('multer');
 const { getStorage } = require('firebase-admin/storage');
 const upload = multer({ storage: multer.memoryStorage() });
 const bucket = getStorage().bucket("yallaclass-5cc62.appspot.com");
+const { analyzeStudentRisk } = require('./aiService');
+
 app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
 const admin = require('firebase-admin'); 
 const { sendRiskAlertToUser } = require('./notificationService'); 
 
+// API: Add Single User
 app.post('/admin/add-user', async (req, res) => {
     try {
         console.log("Data received from Frontend:", req.body);
-        const { email, password, fullName, role, academicYear, ...userData } = req.body;
+        
+        
+        const { email, password, fullName, role, academicYear, code, ...userData } = req.body;
 
         if (!email || !password) {
             return res.status(400).json({ success: false, error: "Email and password are required" });
         }
         if (!fullName || !role || !academicYear) {
             return res.status(400).json({ success: false, error: "Full name, role, and academic year are required" });
+        }
+
+        
+        if (code && !/^[a-zA-Z0-9-]+$/.test(code)) {
+            return res.status(400).json({ success: false, error: "Student code must be letters and numbers only" });
         }
 
         const authResult = await authService.signUp(email, password);
@@ -35,22 +46,21 @@ app.post('/admin/add-user', async (req, res) => {
                 role,
                 email,
                 academicYear,
+                code, 
                 ...userData  
             };
 
             const dbResult = await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
 
             if (dbResult.success) {
-                
-                // --- هنا ضفنا جزء الإيميل ---
                 await databaseService.sendWelcomeEmail(email, fullName, password);
-                // --------------------------
 
                 return res.status(201).json({ 
                     success: true, 
                     message: "User registered, profile created, and email sent!" 
                 });
             } else {
+                 
                 return res.status(500).json({ 
                     success: false, 
                     error: "Account created, but failed to save profile to Firestore" 
@@ -83,8 +93,7 @@ app.post('/admin/add-users-bulk', async (req, res) => {
         const results = []; 
 
         for (const user of users) {
-            
-            const { email, password, fullName, role, academicYear, department, code, phoneNumber } = user;
+            const { email, password, fullName, role, academicYear, department, code, phoneNumber,gpa } = user;
 
             if (!email || !password || !fullName) {
                 results.push({ email: email || 'missing', success: false, error: "Missing data" });
@@ -92,11 +101,9 @@ app.post('/admin/add-users-bulk', async (req, res) => {
             }
 
             try {
-
                 const authResult = await authService.signUp(email, password);
 
                 if (authResult.success) {
-                    
                     const finalProfileData = { 
                         fullName, 
                         role: role || 'student', 
@@ -104,17 +111,15 @@ app.post('/admin/add-users-bulk', async (req, res) => {
                         academicYear: academicYear || 'N/A',
                         department: department || '',      
                         code: code || '',                  
-                        phoneNumber: phoneNumber || ''      
+                        phoneNumber: phoneNumber || '',
+                        gpa: gpa || null 
                     };
 
                     await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
-
-    
                     await databaseService.sendWelcomeEmail(email, fullName, password);
 
                     results.push({ email, success: true });
                 } else {
-                
                     results.push({ email, success: false, error: authResult.error });
                 }
             } catch (err) {
@@ -133,7 +138,8 @@ app.post('/admin/add-users-bulk', async (req, res) => {
         res.status(500).json({ success: false, error: "Internal Server Error" });
     }
 });
-//to call it by admin dashboard
+
+// API: Get All Users
 app.get('/admin/users', async (req, res) => {
     try {
         const result = await databaseService.getAllUsers();
@@ -142,7 +148,7 @@ app.get('/admin/users', async (req, res) => {
             return res.status(200).json({ 
                 success: true, 
                 message: "Users fetched successfully",
-                users: result.users //send the list of users to the frontend
+                users: result.users 
             });
         } else {
             return res.status(500).json({ 
@@ -159,7 +165,8 @@ app.get('/admin/users', async (req, res) => {
         });
     }
 });
-// (password Reset)
+
+// API: Reset Password
 app.post('/reset-password', async (req, res) => {
     try {
         const { email } = req.body;
@@ -186,9 +193,9 @@ app.post('/reset-password', async (req, res) => {
     }
 });
 
-app.get('/', (req, res) => res.send("Server is ALIVE!")); //check the server
+app.get('/', (req, res) => res.send("Server is ALIVE!"));
 
-//(Verify Login & Get Profile)
+// API: Verify Login
 app.post('/verify-login', async (req, res) => {
     try {
         const { idToken } = req.body;
@@ -222,14 +229,16 @@ app.post('/verify-login', async (req, res) => {
     }
 });
 
-//delete path for admin dashboard to delete user from both auth and firestore
+// API: Delete User (Auth + Firestore)
 app.delete('/admin/delete-user/:uid', async (req, res) => {
     try {
         const { uid } = req.params; 
 
+        // 1. Delete from Authentication (Handles "user not found" gracefully now)
         const authDelete = await authService.deleteUser(uid);
 
         if (authDelete.success) {
+            // 2. Delete from Firestore
             const dbDelete = await databaseService.deleteUserFromFirestore(uid);
 
             if (dbDelete.success) {
@@ -237,16 +246,22 @@ app.delete('/admin/delete-user/:uid', async (req, res) => {
                     success: true, 
                     message: "User deleted successfully from Auth and Firestore" 
                 });
+            } else {
+                 return res.status(500).json({ 
+                    success: false, 
+                    error: "User deleted from Auth, but failed to delete from Firestore" 
+                });
             }
         }
 
-        res.status(400).json({ success: false, error: "Failed to delete user" });
+        res.status(400).json({ success: false, error: "Failed to delete user from Auth" });
 
     } catch (error) {
         res.status(500).json({ success: false, error: "Internal Server Error" });
     }
 });
-//update path for admin dashboard to update user in firestore 
+
+// API: Update User (Firestore)
 app.put('/admin/update-user/:uid', async (req, res) => {
     try {
         const { uid } = req.params;
@@ -274,6 +289,7 @@ app.put('/admin/update-user/:uid', async (req, res) => {
         res.status(500).json({ success: false, error: "Internal Server Error" });
     }
 });
+
 app.get('/api/profile', verifyToken, async (req, res) => {
     try {
         const userData = await databaseService.getUserData(req.user.uid);
@@ -296,7 +312,7 @@ app.get('/api/profile', verifyToken, async (req, res) => {
     }
 });
 
-//update path for user dashboard to update him in firestore 
+// API: User Updates own profile
 app.put('/api/profile/update', verifyToken, async (req, res) => {
     try {
         const updates = req.body;
@@ -315,7 +331,7 @@ app.put('/api/profile/update', verifyToken, async (req, res) => {
     }
 });
 
-// to make user change password
+// API: User Changes Password
 app.put('/api/profile/update-password', verifyToken, async (req, res) => {
     try {
         const { newPassword } = req.body;
@@ -334,7 +350,8 @@ app.put('/api/profile/update-password', verifyToken, async (req, res) => {
         res.status(500).json({ success: false, error: "Password Update Error" });
     }
 });
-// view all courses available for the student
+
+// API: Get Courses
 app.get('/api/all-courses', verifyToken, async (req, res) => {
     try {
         const result = await databaseService.getAllAvailableCourses();
@@ -351,7 +368,8 @@ app.get('/api/all-courses', verifyToken, async (req, res) => {
         res.status(500).json({ success: false, error: "Internal Server Error" });
     }
 });
-// to make admin add new course
+
+// API: Admin Add Course
 app.post('/admin/add-course', verifyToken, async (req, res) => {
    if (req.user.role !== 'admin') {
         return res.status(403).json({ success: false, error: "Forbidden: Admins only" });
@@ -381,7 +399,8 @@ app.post('/admin/add-course', verifyToken, async (req, res) => {
         res.status(500).json({ success: false, error: "Internal Server Error" });
     }
 });
-// Bulk Add Courses Endpoint
+
+// API: Bulk Add Courses
 app.post('/admin/add-courses-bulk', verifyToken, async (req, res) => {
     
     if (req.user.role !== 'admin') {
@@ -404,7 +423,6 @@ app.post('/admin/add-courses-bulk', verifyToken, async (req, res) => {
             }
 
             try {
-            
                 const result = await databaseService.addCourse(course);
 
                 if (result.success) {
@@ -428,7 +446,8 @@ app.post('/admin/add-courses-bulk', verifyToken, async (req, res) => {
         res.status(500).json({ success: false, error: "Internal Server Error" });
     }
 });
-// Route to handle profile picture upload and persistence
+
+// API: Upload Profile Image
 app.post('/api/profile/upload-image', verifyToken, upload.single('image'), async (req, res) => {
     try {
         if (!req.file) {
@@ -464,6 +483,8 @@ app.post('/api/profile/upload-image', verifyToken, upload.single('image'), async
         res.status(500).json({ success: false, error: "An error occurred during image upload" });
     }
 });
+
+// API: Enroll in Course
 app.post('/api/enroll-course', async (req, res) => {
     const { studentUid, courseId } = req.body;
     const result = await databaseService.enrollStudentInCourse(studentUid, courseId);
@@ -475,7 +496,7 @@ app.post('/api/enroll-course', async (req, res) => {
     }
 });
 
-// API to update attendance risk and send alert
+// API: Update Risk
 app.post('/api/attendance/update-risk',verifyToken, async (req, res) => {
     try {
         const { uid, riskLevel } = req.body; 
@@ -502,16 +523,35 @@ app.post('/api/attendance/update-risk',verifyToken, async (req, res) => {
         res.status(500).json({ success: false, error: "Failed to update risk or send alert." });
     }
 });
-async function handleAddUser(req, res) {
-    const { name, email, password, role } = req.body;
-    const result = await databaseService.addUserAndSendEmail({ name, email, password, role });
+// API: Analyze Student Risk using AI
+app.post('/api/analyze-risk/:uid', async (req, res) => {
+    try {
+        const { uid } = req.params;
 
-    if (result.success) {
-        res.status(200).json({ message: result.message });
-    } else {
-        res.status(400).json({ message: result.message });
+        const studentData = await databaseService.getUserData(uid);
+
+        if (!studentData) {
+            return res.status(404).json({ success: false, error: "Student not found" });
+        }
+
+        const analysis = await analyzeStudentRisk(studentData);
+
+        await databaseService.updateUserInFirestore(uid, { 
+            riskLevel: analysis.riskLevel,
+            riskExplanation: analysis.explanation 
+        });
+
+        res.status(200).json({ 
+            success: true, 
+            message: "Risk analysis completed",
+            analysis: analysis 
+        });
+
+    } catch (error) {
+        console.error("Risk Analysis Error:", error);
+        res.status(500).json({ success: false, error: "Internal Server Error" });
     }
-}
+});
 
 const PORT = 3001;
 app.listen(PORT, () => console.log(`Integration Server is running on port ${PORT}`));

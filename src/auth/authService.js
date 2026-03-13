@@ -6,7 +6,7 @@ if (!admin.apps.length) {
         credential: admin.credential.cert(serviceAccount)
     });
 }
-//
+
 const auth = admin.auth();
 
 const signUp = async (email, password) => {
@@ -38,9 +38,13 @@ const getPasswordResetLink = async (email) => {
 const deleteUser = async (uid) => {
     try {
         await auth.deleteUser(uid);
-        console.log(' User deleted successfully');
+        console.log(' User deleted successfully from Auth');
         return { success: true };
     } catch (error) {
+        if (error.code === 'auth/user-not-found') {
+            console.log(' User not found in Auth, proceeding...');
+            return { success: true };
+        }
         console.error(' Delete Error:', error.code);
         return { success: false, error: error.code };
     }
@@ -56,6 +60,7 @@ const verifyToken = async (idToken) => {
         return { success: false, error: error.code };
     }
 };
+
 const updateUserPassword = async (uid, newPassword) => {
     try {
         await admin.auth().updateUser(uid, {
@@ -67,6 +72,4 @@ const updateUserPassword = async (uid, newPassword) => {
     }
 };
 
- //signUp('test_key_working@yallaclass.com', 'password123'); //test code 
- 
-module.exports = { signUp,  getPasswordResetLink,  deleteUser,  verifyToken , updateUserPassword};
+module.exports = { signUp, getPasswordResetLink, deleteUser, verifyToken, updateUserPassword };
