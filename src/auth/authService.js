@@ -1,10 +1,21 @@
 const admin = require('firebase-admin');
-const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG);
+const path = require('path');
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  storageBucket: "yallaclass-5cc62.appspot.com"
-})
+try {
+    let serviceAccount;
+    if (process.env.NODE_ENV !== 'production') {
+        serviceAccount = require('../config/service-account-key.json');
+    } else {
+        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    }
+
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+    });
+    console.log("✅ Firebase Admin initialized!");
+} catch (error) {
+    console.error("❌ Firebase Error:", error.message);
+}
 
 if (!admin.apps.length) {
     admin.initializeApp({
@@ -77,4 +88,4 @@ const updateUserPassword = async (uid, newPassword) => {
     }
 };
 
-module.exports = { signUp, getPasswordResetLink, deleteUser, verifyToken, updateUserPassword };
+module.exports = { signUp, getPasswordResetLink, deleteUser, verifyToken, updateUserPassword,admin };
