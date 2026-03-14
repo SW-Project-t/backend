@@ -1,5 +1,10 @@
 const admin = require('firebase-admin');
-const serviceAccount = require('../config/service-account-key.json');
+const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG);
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  storageBucket: "yallaclass-5cc62.appspot.com"
+})
 
 if (!admin.apps.length) {
     admin.initializeApp({
