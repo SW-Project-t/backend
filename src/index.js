@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const bodyParser = require('body-parser');
 const authService = require('./auth/authService'); 
 const databaseService = require('./database/databaseService'); 
@@ -11,8 +10,13 @@ const { getStorage } = require('firebase-admin/storage');
 const upload = multer({ storage: multer.memoryStorage() });
 const bucket = getStorage().bucket("yallaclass-5cc62.appspot.com");
 const { analyzeStudentRisk } = require('./aiService');
+const cors = require('cors');
+app.use(cors({
+  origin: '*', // أو حط لينك موقعك على فايربيز هنا
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
 const admin = require('firebase-admin'); 
@@ -552,6 +556,8 @@ app.post('/api/analyze-risk/:uid', async (req, res) => {
         res.status(500).json({ success: false, error: "Internal Server Error" });
     }
 });
+const PORT = process.env.PORT || 3001;
 
-const PORT = 3001;
-app.listen(PORT, () => console.log(`Integration Server is running on port ${PORT}`));
+app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server is running on port ${PORT}`);
+});
