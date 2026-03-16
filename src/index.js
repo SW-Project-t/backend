@@ -64,7 +64,6 @@ app.post('/admin/add-user', async (req, res) => {
                     message: "User registered, profile created, and email sent!" 
                 });
             } else {
-                 
                 return res.status(500).json({ 
                     success: false, 
                     error: "Account created, but failed to save profile to Firestore" 
