@@ -1,6 +1,4 @@
 require('dotenv').config();
-// 🌟 التعديل السحري: إجبار الـ Node.js على استخدام IPv4 لحل مشكلة فشل الاتصال بإيميل Brevo
-require('dns').setDefaultResultOrder('ipv4first'); 
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -15,9 +13,8 @@ const upload = multer({ storage: multer.memoryStorage() });
 const bucket = getStorage().bucket("yallaclass-5cc62.appspot.com");
 const { analyzeStudentRisk } = require('./aiService');
 
-// 🌟 التعديل القديم بتاعك: تظبيط الـ CORS بأبسط وأضمن طريقة لحل المشاكل
 const cors = require('cors');
-app.use(cors()); // دي هتفتح الدنيا تماماً بدون أي قيود تسبب إيرورز في الكونسول
+app.use(cors()); // فتح الـ CORS بأضمن طريقة
 
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
@@ -57,8 +54,11 @@ app.post('/admin/add-user', async (req, res) => {
             const dbResult = await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
 
             if (dbResult.success) {
-                // 📧 هيبعت في الخلفية بالبيانات النضيفة
-                await databaseService.sendWelcomeEmail(email, fullName, password);
+                // 📧 بيبعت الإيميل في الخلفية
+                databaseService.sendWelcomeEmail(email, fullName, password)
+                    .then(() => console.log(`📩 Background: Email sent to ${email}`))
+                    .catch((err) => console.error(`❌ Background Email Error for ${email}:`, err));
+
                 return res.status(201).json({ 
                     success: true, 
                     message: "User registered, profile created, and email sending in background!" 
@@ -121,10 +121,13 @@ app.post('/admin/add-users-bulk', async (req, res) => {
 
                     await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
                     
-                    // إرسال في الخلفية
-                    databaseService.sendWelcomeEmail(email, fullName, password)
-                        .then(() => console.log(`📩 Background (Bulk): Email sent to ${email}`))
-                        .catch((err) => console.error(`❌ Background Email Error for ${email}:`, err));
+                    // 🌟 التعديل هنا: نخليه ينتظر الإرسال لكل واحد عشان الـ API ميقعش في الـ Bulk
+                    try {
+                        await databaseService.sendWelcomeEmail(email, fullName, password);
+                        console.log(`📩 Email sent successfully to ${email}`);
+                    } catch (emailErr) {
+                        console.error(`❌ Email Error for ${email}:`, emailErr);
+                    }
 
                     results.push({ email, success: true });
                 } else {
