@@ -1,14 +1,8 @@
 require('dotenv').config();
 const admin = require('firebase-admin');
-const Brevo = require('@getbrevo/brevo'); // استبدلنا Nodemailer بمكتبة بريفو الرسمية
+const axios = require('axios'); // 🌟 استخدمنا axios عشان نكلم الـ API مباشرة ونمنع الـ Crash
 
 const db = admin.firestore();
-
-// 🚀 الطريقة الرسمية الأضمن للإصدار الأخير من Brevo
-let apiInstance = new Brevo.TransactionalEmailsApi();
-
-// ربط الـ API Key مباشرة بالـ instance
-apiInstance.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.SENDINBLUE_KEY);
 
 const checkUserExists = async (email) => {
     try {
@@ -156,41 +150,44 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
     }
 };
 
-// 📧 دالة الإرسال الجديدة باستخدام الـ API المضمون
+// 📧 دالة الإرسال الجديدة والأكيدة بمكالمة HTTP عادية
 const sendWelcomeEmail = async (email, name, password) => {
-    console.log("⏳ بنحاول نبعت الإيميل دلوقتي مستخدمين الـ API بتاع Brevo...");
-    
-    let sendSmtpEmail = new Brevo.SendSmtpEmail();
+    console.log("⏳ بنحاول نبعت الإيميل دلوقتي مستخدمين الـ API المباشر لـ Brevo...");
 
-    sendSmtpEmail.subject = 'Welcome to Yalla Class - Your Account Details';
-    sendSmtpEmail.htmlContent = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <h3 style="color: #4CAF50;">Hello ${name},</h3>
-            <p>Your account has been created by the Admin on <strong>Yalla Class</strong>.</p>
-            <p>Here are your login credentials:</p>
-            <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; border: 1px solid #ddd;">
-                <ul style="list-style: none; padding: 0; margin: 0;">
-                    <li><strong>Email:</strong> <span style="color: #0056b3;">${email}</span></li>
-                    <li><strong>Password:</strong> <span style="color: #0056b3;">${password}</span></li>
-                </ul>
+    const emailPayload = {
+        sender: { name: "Yalla Class Admin", email: "sebaiahmed964@gmail.com" },
+        to: [{ email: email, name: name }],
+        subject: "Welcome to Yalla Class - Your Account Details",
+        htmlContent: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <h3 style="color: #4CAF50;">Hello ${name},</h3>
+                <p>Your account has been created by the Admin on <strong>Yalla Class</strong>.</p>
+                <p>Here are your login credentials:</p>
+                <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; border: 1px solid #ddd;">
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li><strong>Email:</strong> <span style="color: #0056b3;">${email}</span></li>
+                        <li><strong>Password:</strong> <span style="color: #0056b3;">${password}</span></li>
+                    </ul>
+                </div>
+                <p style="color: #ff0000; font-size: 0.9em; font-weight: bold; margin-top: 15px;">
+                    ⚠️ Please login and change your password immediately for security reasons.
+                </p>
             </div>
-            <p style="color: #ff0000; font-size: 0.9em; font-weight: bold; margin-top: 15px;">
-                ⚠️ Please login and change your password immediately for security reasons.
-            </p>
-        </div>
-    `;
-    
-    // 🌟 اتأكد إن الإيميل ده هو المسجل في حسابك على بريفو
-    sendSmtpEmail.sender = { "name": "Yalla Class Admin", "email": "sebaiahmed964@gmail.com" };
-    sendSmtpEmail.to = [{ "email": email, "name": name }];
+        `
+    };
 
     try {
-        // 🌟 استدعينا الـ apiInstance المعرف فوق خالص
-        const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
-        console.log(`✅ Email sent successfully via API to ${email}. Message ID:`, data.messageId);
+        const response = await axios.post('https://api.brevo.com/v3/smtp/email', emailPayload, {
+            headers: {
+                'api-key': process.env.SENDINBLUE_KEY,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        console.log(`✅ Email sent successfully! Message ID:`, response.data.messageId);
         return { success: true };
     } catch (error) {
-        console.error('❌ Detailed Email Error from Brevo API:', error);
+        console.error('❌ Detailed Email Error from Brevo API:', error.response ? error.response.data : error.message);
         return { success: false, error: error.message };
     }
 };
