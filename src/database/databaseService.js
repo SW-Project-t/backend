@@ -150,21 +150,28 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
     }
 };
 
-// 📧 دالة الإرسال عبر Gmail
+
 const sendWelcomeEmail = async (email, name, password) => {
-    console.log("⏳ بنحاول نبعت الإيميل دلوقتي مستخدمين Resend...");
+    const transporter = nodemailer.createTransport({
+        host: 'smtp.sendgrid.net',
+        port: 587,
+        secure: false,
+        auth: {
+            user: 'apikey',                           // حرفياً الكلمة دي
+            pass: process.env.SENDGRID_API_KEY,
+        }
+    });
 
     try {
-        const { data, error } = await resend.emails.send({
-            from: 'Yalla Class Admin <onboarding@resend.dev>',
+        const info = await transporter.sendMail({
+            from: '"Yalla Class Admin" <your@gmail.com>',
             to: email,
             subject: 'Welcome to Yalla Class - Your Account Details',
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                     <h3 style="color: #4CAF50;">Hello ${name},</h3>
                     <p>Your account has been created by the Admin on <strong>Yalla Class</strong>.</p>
-                    <p>Here are your login credentials:</p>
-                    <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; border: 1px solid #ddd;">
+                    <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px;">
                         <ul style="list-style: none; padding: 0; margin: 0;">
                             <li><strong>Email:</strong> <span style="color: #0056b3;">${email}</span></li>
                             <li><strong>Password:</strong> <span style="color: #0056b3;">${password}</span></li>
@@ -176,16 +183,10 @@ const sendWelcomeEmail = async (email, name, password) => {
                 </div>
             `
         });
-
-        if (error) {
-            console.error('❌ Resend Error:', error);
-            return { success: false, error: error.message };
-        }
-
-        console.log(`✅ Email sent successfully! ID:`, data.id);
+        console.log('✅ Email sent successfully!', info.messageId);
         return { success: true };
     } catch (error) {
-        console.error('❌ Detailed Email Error:', error);
+        console.error('❌ Email Error:', error);
         return { success: false, error: error.message };
     }
 };
