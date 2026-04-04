@@ -1,6 +1,6 @@
 require('dotenv').config();
 const admin = require('firebase-admin');
-const axios = require('axios'); // 🌟 استخدمنا axios عشان نكلم الـ API مباشرة ونمنع الـ Crash
+const nodemailer = require('nodemailer'); // 🌟 استخدمنا Nodemailer عشان المفتاح اللي معاك يشتغل فوراً
 
 const db = admin.firestore();
 
@@ -150,15 +150,26 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
     }
 };
 
-// 📧 دالة الإرسال الجديدة والأكيدة بمكالمة HTTP عادية
+// 📧 دالة الإرسال الجديدة عبر SMTP
 const sendWelcomeEmail = async (email, name, password) => {
-    console.log("⏳ بنحاول نبعت الإيميل دلوقتي مستخدمين الـ API المباشر لـ Brevo...");
+    console.log("⏳ بنحاول نبعت الإيميل دلوقتي مستخدمين Nodemailer والـ SMTP بتاع Brevo...");
 
-    const emailPayload = {
-        sender: { name: "Yalla Class Admin", email: "sebaiahmed964@gmail.com" },
-        to: [{ email: email, name: name }],
-        subject: "Welcome to Yalla Class - Your Account Details",
-        htmlContent: `
+    // إعداد الاتصال بسيرفر بريفو
+    const transporter = nodemailer.createTransport({
+        host: 'smtp-relay.brevo.com',
+        port: 587,
+        secure: false, // بورت 587 يتطلب false
+        auth: {
+            user: 'sebaiahmed964@gmail.com', // الإيميل اللي مسجل بيه في بريفو
+            pass: 'xsmtpsib-8d1d99ef8d860709e8b196a7f8a5a3382ce32579d23aeac52a5d7e2e630bc4e2-HnKd2Oy5zpbOM8cm' // المفتاح بتاعك اللي بيبدأ بـ xsmtpsib
+        }
+    });
+
+    const mailOptions = {
+        from: '"Yalla Class Admin" <sebaiahmed964@gmail.com>',
+        to: email,
+        subject: 'Welcome to Yalla Class - Your Account Details',
+        html: `
             <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                 <h3 style="color: #4CAF50;">Hello ${name},</h3>
                 <p>Your account has been created by the Admin on <strong>Yalla Class</strong>.</p>
@@ -177,17 +188,11 @@ const sendWelcomeEmail = async (email, name, password) => {
     };
 
     try {
-        const response = await axios.post('https://api.brevo.com/v3/smtp/email', emailPayload, {
-            headers: {
-                'api-key': 'xsmtpsib-8d1d99ef8d860709e8b196a7f8a5a3382ce32579d23aeac52a5d7e2e630bc4e2-HnKd2Oy5zpbOM8cm',
-                'Content-Type': 'application/json'
-            }
-        });
-
-        console.log(`✅ Email sent successfully! Message ID:`, response.data.messageId);
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`✅ Email sent successfully! Message ID:`, info.messageId);
         return { success: true };
     } catch (error) {
-        console.error('❌ Detailed Email Error from Brevo API:', error.response ? error.response.data : error.message);
+        console.error('❌ Detailed Email Error from Nodemailer:', error);
         return { success: false, error: error.message };
     }
 };
