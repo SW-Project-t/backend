@@ -160,13 +160,13 @@ const sendWelcomeEmail = async (email, name, password) => {
         port: 587,
         secure: false, // بورت 587 يتطلب false
         auth: {
-            user: 'sebaiahmed964@gmail.com', // الإيميل اللي مسجل بيه في بريفو
-            pass: 'xsmtpsib-8d1d99ef8d860709e8b196a7f8a5a3382ce32579d23aeac52a5d7e2e630bc4e2-HnKd2Oy5zpbOM8cm' // المفتاح بتاعك اللي بيبدأ بـ xsmtpsib
+            user: process.env.EMAIL_USER, // 👈 هيقرا sebaiahmed964@gmail.com تلقائياً من ريلواي
+            pass: process.env.EMAIL_PASS  // 👈 هيقرا المفتاح (الـ SMTP Password) تلقائياً من ريلواي
         }
     });
 
     const mailOptions = {
-        from: '"Yalla Class Admin" <sebaiahmed964@gmail.com>',
+        from: `"Yalla Class Admin" <sebaiahmed964@gmail.com>`, // 👈 خليت الإيميل هنا صريح عشان الإرسال يتقبل
         to: email,
         subject: 'Welcome to Yalla Class - Your Account Details',
         html: `
