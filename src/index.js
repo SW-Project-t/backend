@@ -27,7 +27,6 @@ app.post('/admin/add-user', async (req, res) => {
     try {
         console.log("Data received from Frontend:", req.body);
         
-        
         const { email, password, fullName, role, academicYear, code, ...userData } = req.body;
 
         if (!email || !password) {
@@ -37,7 +36,6 @@ app.post('/admin/add-user', async (req, res) => {
             return res.status(400).json({ success: false, error: "Full name, role, and academic year are required" });
         }
 
-        
         if (code && !/^[a-zA-Z0-9-]+$/.test(code)) {
             return res.status(400).json({ success: false, error: "Student code must be letters and numbers only" });
         }
@@ -57,11 +55,15 @@ app.post('/admin/add-user', async (req, res) => {
             const dbResult = await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
 
             if (dbResult.success) {
-                await databaseService.sendWelcomeEmail(email, fullName, password);
+                
+                // ⚠️ التعديل هنا: شيلنا الـ await عشان الإيميل يتبعت في الخلفية وميعملش Timeout
+                databaseService.sendWelcomeEmail(email, fullName, password)
+                    .then(() => console.log(`📩 Background: Welcome email sent successfully to ${email}`))
+                    .catch((err) => console.error(`❌ Background Email Error for ${email}:`, err));
 
                 return res.status(201).json({ 
                     success: true, 
-                    message: "User registered, profile created, and email sent!" 
+                    message: "User registered, profile created, and email sending in background!" 
                 });
             } else {
                 return res.status(500).json({ 
@@ -84,6 +86,7 @@ app.post('/admin/add-user', async (req, res) => {
         });
     }
 });
+
 // Bulk Add Users Endpoint
 app.post('/admin/add-users-bulk', async (req, res) => {
     try {
@@ -96,7 +99,7 @@ app.post('/admin/add-users-bulk', async (req, res) => {
         const results = []; 
 
         for (const user of users) {
-            const { email, password, fullName, role, academicYear, department, code, phoneNumber,gpa } = user;
+            const { email, password, fullName, role, academicYear, department, code, phoneNumber, gpa } = user;
 
             if (!email || !password || !fullName) {
                 results.push({ email: email || 'missing', success: false, error: "Missing data" });
@@ -119,7 +122,11 @@ app.post('/admin/add-users-bulk', async (req, res) => {
                     };
 
                     await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
-                    await databaseService.sendWelcomeEmail(email, fullName, password);
+                    
+                    // ⚠️ التعديل برضه هنا: شيلنا الـ await في الـ Bulk عشان السيرفر ميموتش
+                    databaseService.sendWelcomeEmail(email, fullName, password)
+                        .then(() => console.log(`📩 Background (Bulk): Email sent to ${email}`))
+                        .catch((err) => console.error(`❌ Background Email Error for ${email}:`, err));
 
                     results.push({ email, success: true });
                 } else {
@@ -237,11 +244,9 @@ app.delete('/admin/delete-user/:uid', async (req, res) => {
     try {
         const { uid } = req.params; 
 
-        // 1. Delete from Authentication (Handles "user not found" gracefully now)
         const authDelete = await authService.deleteUser(uid);
 
         if (authDelete.success) {
-            // 2. Delete from Firestore
             const dbDelete = await databaseService.deleteUserFromFirestore(uid);
 
             if (dbDelete.success) {
@@ -500,7 +505,7 @@ app.post('/api/enroll-course', async (req, res) => {
 });
 
 // API: Update Risk
-app.post('/api/attendance/update-risk',verifyToken, async (req, res) => {
+app.post('/api/attendance/update-risk', verifyToken, async (req, res) => {
     try {
         const { uid, riskLevel } = req.body; 
 
@@ -526,6 +531,7 @@ app.post('/api/attendance/update-risk',verifyToken, async (req, res) => {
         res.status(500).json({ success: false, error: "Failed to update risk or send alert." });
     }
 });
+
 // API: Analyze Student Risk using AI
 app.post('/api/analyze-risk/:uid', async (req, res) => {
     try {
@@ -555,6 +561,7 @@ app.post('/api/analyze-risk/:uid', async (req, res) => {
         res.status(500).json({ success: false, error: "Internal Server Error" });
     }
 });
+
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, "0.0.0.0", () => {
