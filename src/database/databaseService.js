@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
     secure: false, // لازم false مع بورت 587
     auth: {
         user: 'a72094001@smtp-brevo.com',
-        pass: 'xsmtpsib-8d1d99ef8d860709e8b196a7f8a5a3382ce32579d23aeac52a5d7e2e630bc4e2-HnKd2Oy5zpbOM8cm' // حط الـ SMTP Key اللي نسخناه
+        pass: process.env.SENDINBLUE_KEY// حط الـ SMTP Key اللي نسخناه
     }
 });
 
