@@ -1,12 +1,12 @@
 require('dotenv').config();
 const admin = require('firebase-admin');
-const Brevo = require('@getbrevo/brevo'); // 🌟 استبدلنا Nodemailer بمكتبة بريفو الرسمية
+const Brevo = require('@getbrevo/brevo'); // استبدلنا Nodemailer بمكتبة بريفو الرسمية
 
 const db = admin.firestore();
 
-// 🚀 إعداد الـ API Client لبريفو
-let defaultClient = Brevo.ApiClient.instance;
-let apiKey = defaultClient.authentications['api-key'];
+// 🚀 إعداد الـ API Client لبريفو بالطريقة الجديدة
+let apiInstance = new Brevo.TransactionalEmailsApi();
+let apiKey = apiInstance.authentications['apiKey'];
 apiKey.apiKey = process.env.SENDINBLUE_KEY; // بيقرأ الـ Key من ريلواي
 
 const checkUserExists = async (email) => {
@@ -159,7 +159,6 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
 const sendWelcomeEmail = async (email, name, password) => {
     console.log("⏳ بنحاول نبعت الإيميل دلوقتي مستخدمين الـ API بتاع Brevo...");
     
-    let apiInstance = new Brevo.TransactionalEmailsApi();
     let sendSmtpEmail = new Brevo.SendSmtpEmail();
 
     sendSmtpEmail.subject = 'Welcome to Yalla Class - Your Account Details';
@@ -185,6 +184,7 @@ const sendWelcomeEmail = async (email, name, password) => {
     sendSmtpEmail.to = [{ "email": email, "name": name }];
 
     try {
+        // 🌟 استدعينا الـ apiInstance المعرف فوق خالص
         const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
         console.log(`✅ Email sent successfully via API to ${email}. Message ID:`, data.messageId);
         return { success: true };
