@@ -4,21 +4,22 @@ const nodemailer = require('nodemailer');
 
 const db = admin.firestore();
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587, // 👈 غيرناه لـ 587 بدل 465
-    secure: false, // 👈 خليناها false لأن الـ 587 بيحتاج false ويبدأ يرفع التشفير بعد كدا
+    // 👇 شيلنا كلمة smtp.gmail.com وحطينا الـ IP المباشر بتاعها (IPv4)
+    host: '142.251.4.108', 
+    port: 465, // رجعناه لـ 465 اللي هو الأكثر أماناً
+    secure: true, 
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
-    family: 4, 
-    connectionTimeout: 10000, 
     tls: {
         rejectUnauthorized: false,
-        minVersion: 'TLSv1.2'
+        // 👇 السطر ده مهم عشان يتأكد إن الشهادة مطابقة لاسم جوجل حتى وإحنا مستخدمين IP
+        servername: 'smtp.gmail.com'
     }
 });
 
+// السطر ده سيبه برضه احتياطي عشان نأمن نفسنا تماماً
 require('dns').setDefaultResultOrder('ipv4first');
 
 const checkUserExists = async (email) => {
