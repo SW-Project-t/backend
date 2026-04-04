@@ -5,19 +5,27 @@ const nodemailer = require('nodemailer');
 const db = admin.firestore();
 
 // 🚀 الـ Transporter السحري السليم اللي بيحل مشاكل Railway
+// 🚀 الـ Transporter النهائي والقاطع لمشاكل ريلواي
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
     secure: true, 
-    family: 4, // 👈 السطر ده سحري هيحل مشكلة الـ ENETUNREACH تماماً!
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
+    // 👇 ركز هنا.. السطور دي بتجبر السيستم يكلم IPv4 بس
+    family: 4, 
+    connectionTimeout: 10000, // عشان لو السيرفر رخم ميعلقش
     tls: {
-        rejectUnauthorized: false 
+        rejectUnauthorized: false,
+        // 👇 السطر ده قاطع لمنع الـ IPv6
+        minVersion: 'TLSv1.2'
     }
 });
+
+// 👇 والسطر ده سحري اكتبه تحت الـ Transporter على طول عشان يجبر الـ Node.js كلها
+require('dns').setDefaultResultOrder('ipv4first');
 
 const checkUserExists = async (email) => {
     try {
