@@ -1,7 +1,13 @@
 const admin = require('firebase-admin');
 if (!admin.apps.length) {
     try {
-        const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG);
+        const rawConfig = process.env.FIREBASE_CONFIG || process.env.FIREBASE_SERVICE_ACCOUNT;
+        
+        if (!rawConfig) {
+             throw new Error("No firebase credentials found in environment variables!");
+        }
+
+        const serviceAccount = JSON.parse(rawConfig);
         
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
