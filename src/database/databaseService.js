@@ -155,11 +155,13 @@ const sendWelcomeEmail = async (email, name, password) => {
     console.log("⏳ بنحاول نبعت الإيميل دلوقتي مستخدمين Nodemailer وحساب Gmail...");
 
     // إعداد الاتصال بسيرفر الجيميل
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
+  const transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true, // true للبورت 465
         auth: {
-            user: process.env.EMAIL_USER, // 👈 هيقرا sebaiahmed964@gmail.com من ريلواي
-            pass: process.env.EMAIL_PASS  // 👈 ⚠️ هنا هتحط الـ App Password الـ 16 حرف في ريلواي
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS 
         }
     });
 
