@@ -9,16 +9,12 @@ const multer = require('multer');
 const { getStorage } = require('firebase-admin/storage');
 const upload = multer({ storage: multer.memoryStorage() });
 
-// تأكد إن firebase-admin تم عمل initialize له قبل السطر ده في ملف السيرفر الأساسي
 const bucket = getStorage().bucket("yallaclass-5cc62.appspot.com");
 const { analyzeStudentRisk } = require('./aiService');
-const cors = require('cors');
 
-app.use(cors({
-  origin: '*', // ممتاز للـ Development، ولو احتجت أمان أكتر حط دومين الفايربيز بتاعك هنا
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// 🌟 التعديل 1: تظبيط الـ CORS بأبسط وأضمن طريقة لحل المشاكل
+const cors = require('cors');
+app.use(cors()); // دي هتفتح الدنيا تماماً بدون أي قيود تسبب إيرورز في الكونسول
 
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
@@ -58,6 +54,7 @@ app.post('/admin/add-user', async (req, res) => {
             const dbResult = await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
 
             if (dbResult.success) {
+                // 📧 هيبعت في الخلفية بالبيانات النضيفة
                 await databaseService.sendWelcomeEmail(email, fullName, password);
                 return res.status(201).json({ 
                     success: true, 
@@ -105,7 +102,6 @@ app.post('/admin/add-users-bulk', async (req, res) => {
             }
 
             try {
-                // ⚠️ السطر ده تم تصليحه بإضافة الـ await
                 const authResult = await authService.signUp(email, password);
 
                 if (authResult.success) {
@@ -122,7 +118,7 @@ app.post('/admin/add-users-bulk', async (req, res) => {
 
                     await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
                     
-                    // برضه هنا هيرسل في الخلفية ومش هيعطل الـ Loop الكبيرة
+                    // إرسال في الخلفية
                     databaseService.sendWelcomeEmail(email, fullName, password)
                         .then(() => console.log(`📩 Background (Bulk): Email sent to ${email}`))
                         .catch((err) => console.error(`❌ Background Email Error for ${email}:`, err));
@@ -396,7 +392,7 @@ app.post('/admin/add-course', verifyToken, async (req, res) => {
             return res.status(201).json({ 
                 success: true, 
                 message: "Course created successfully!", 
-                courseId: result.courseId // تم تعديلها لتوافق الـ databaseService
+                courseId: result.courseId 
             });
         } else {
             return res.status(500).json({ success: false, error: result.error });

@@ -1,27 +1,19 @@
 require('dotenv').config();
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
-const { google } = require('googleapis');
 
 const db = admin.firestore();
+
+// 🚀 الـ Transporter الجديد الخاص بـ Brevo لتخطي حظر بورتات ريلواي
 const transporter = nodemailer.createTransport({
-    // 👇 شيلنا كلمة smtp.gmail.com وحطينا الـ IP المباشر بتاعها (IPv4)
-    host: '142.251.4.108', 
-    port: 465, // رجعناه لـ 465 اللي هو الأكثر أماناً
-    secure: true, 
+    host: 'smtp-relay.brevo.com',
+    port: 587,
+    secure: false, // لازم false مع بورت 587
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    tls: {
-        rejectUnauthorized: false,
-        // 👇 السطر ده مهم عشان يتأكد إن الشهادة مطابقة لاسم جوجل حتى وإحنا مستخدمين IP
-        servername: 'smtp.gmail.com'
+        user: 'a72094001@smtp-brevo.com',
+        pass: 'xsmtpsib-8d1d99ef8d860709e8b196a7f8a5a3382ce32579d23aeac52a5d7e2e630bc4e2-HnKd2Oy5zpbOM8cm' // حط الـ SMTP Key اللي نسخناه
     }
 });
-
-// السطر ده سيبه برضه احتياطي عشان نأمن نفسنا تماماً
-require('dns').setDefaultResultOrder('ipv4first');
 
 const checkUserExists = async (email) => {
     try {
@@ -169,57 +161,36 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
     }
 };
 
-const { google } = require('googleapis');
-
+// 📧 دالة الإرسال باستخدام Nodemailer الكلاسيكي العظيم بعد معالجة مشاكله
 const sendWelcomeEmail = async (email, name, password) => {
-    console.log("🚀 جاري بدء إرسال الإيميل عبر الـ API...");
+    console.log("⏳ بنحاول نبعت الإيميل دلوقتي مستخدمين Brevo...");
     
+    const mailOptions = {
+        from: '"Yalla Class Admin" <a72094001@smtp-brevo.com>', // لازم يكون إيميل بريفو بتاعك
+        to: email,
+        subject: 'Welcome to Yalla Class - Your Account Details',
+        html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <h3 style="color: #4CAF50;">Hello ${name},</h3>
+                <p>Your account has been created by the Admin on <strong>Yalla Class</strong>.</p>
+                <p>Here are your login credentials:</p>
+                <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; border: 1px solid #ddd;">
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li><strong>Email:</strong> <span style="color: #0056b3;">${email}</span></li>
+                        <li><strong>Password:</strong> <span style="color: #0056b3;">${password}</span></li>
+                    </ul>
+                </div>
+                <p style="color: #ff0000; font-size: 0.9em; font-weight: bold; margin-top: 15px;">
+                    ⚠️ Please login and change your password immediately for security reasons.
+                </p>
+            </div>
+        `
+    };
+
     try {
-        // 1. هنعمل الـ Raw Message المشفر اللي جوجل بيفهمه
-        const str = [
-            `To: ${email}`,
-            'Content-Type: text/html; charset=utf-8',
-            'MIME-Version: 1.0',
-            `Subject: Welcome to the System - Your Account Details`,
-            '',
-            '<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">',
-            `   <h3 style="color: #4CAF50;">Hello ${name},</h3>`,
-            '   <p>Your account has been created by the Admin on <strong>Yalla Class</strong>.</p>',
-            '   <p>Here are your login credentials:</p>',
-            '   <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; border: 1px solid #ddd;">',
-            '       <ul style="list-style: none; padding: 0; margin: 0;">',
-            `           <li><strong>Email:</strong> <span style="color: #0056b3;">${email}</span></li>`,
-            `           <li><strong>Password:</strong> <span style="color: #0056b3;">${password}</span></li>`,
-            '       </ul>',
-            '   </div>',
-            '   <p style="color: #ff0000; font-size: 0.9em; font-weight: bold; margin-top: 15px;">',
-            '       ⚠️ Please login and change your password immediately for security reasons.',
-            '   </p>',
-            '</div>'
-        ].join('\n');
-
-        const encodedMessage = Buffer.from(str)
-            .toString('base64')
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=+$/, '');
-
-        // 2. هنستخدم الـ App Password هنا عشان نطلب من جيميل يبعت
-        // السطر ده بيبعت الطلب كـ HTTP Request عادي فـ Railway مستحيل تقفله!
-        const auth = new google.auth.GoogleAuth({
-            credentials: {
-                client_email: process.env.EMAIL_USER,
-                private_key: process.env.EMAIL_PASS
-            }
-        });
-        
-        // ملاحظة: الطريقة دي ممتازة ومضمونة 100% لتخطي حظر الـ Ports.
-        console.log("⏳ بنحاول نبعت الطلب لجوجل...");
-        // كود الإرسال الفعلي بيتم هنا عبر API call
-        
+        await transporter.sendMail(mailOptions);
         console.log(`✅ Email sent successfully to ${email}`);
         return { success: true };
-
     } catch (error) {
         console.error('❌ Detailed Email Error from Railway:', error);
         return { success: false, error: error.message };
