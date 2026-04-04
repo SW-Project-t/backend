@@ -1,19 +1,14 @@
 require('dotenv').config();
 const admin = require('firebase-admin');
-const nodemailer = require('nodemailer');
+const Brevo = require('@getbrevo/brevo'); // 🌟 استبدلنا Nodemailer بمكتبة بريفو الرسمية
 
 const db = admin.firestore();
 
-// 🚀 الـ Transporter الجديد الخاص بـ Brevo لتخطي حظر بورتات ريلواي
-const transporter = nodemailer.createTransport({
-    host: 'smtp-relay.brevo.com',
-    port: 465, // البورت المشفر اللي اتفقنا عليه
-    secure: true, // لازم true مع بورت 465
-    auth: {
-        user: process.env.EMAIL_USER, // هيقرأ القيمة الجديدة من ريلواي
-        pass: process.env.SENDINBLUE_KEY // هيقرأ الـ Key من ريلواي
-    }
-});
+// 🚀 إعداد الـ API Client لبريفو
+let defaultClient = Brevo.ApiClient.instance;
+let apiKey = defaultClient.authentications['api-key'];
+apiKey.apiKey = process.env.SENDINBLUE_KEY; // بيقرأ الـ Key من ريلواي
+
 const checkUserExists = async (email) => {
     try {
         const snapshot = await db.collection('users').where('email', '==', email).get();
@@ -160,38 +155,41 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
     }
 };
 
-// 📧 دالة الإرسال باستخدام Nodemailer الكلاسيكي العظيم بعد معالجة مشاكله
+// 📧 دالة الإرسال الجديدة باستخدام الـ API المضمون
 const sendWelcomeEmail = async (email, name, password) => {
-    console.log("⏳ بنحاول نبعت الإيميل دلوقتي مستخدمين Brevo...");
+    console.log("⏳ بنحاول نبعت الإيميل دلوقتي مستخدمين الـ API بتاع Brevo...");
     
-    const mailOptions = {
-        from: '"Yalla Class Admin" <a72094001@smtp-brevo.com>', // لازم يكون إيميل بريفو بتاعك
-        to: email,
-        subject: 'Welcome to Yalla Class - Your Account Details',
-        html: `
-            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <h3 style="color: #4CAF50;">Hello ${name},</h3>
-                <p>Your account has been created by the Admin on <strong>Yalla Class</strong>.</p>
-                <p>Here are your login credentials:</p>
-                <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; border: 1px solid #ddd;">
-                    <ul style="list-style: none; padding: 0; margin: 0;">
-                        <li><strong>Email:</strong> <span style="color: #0056b3;">${email}</span></li>
-                        <li><strong>Password:</strong> <span style="color: #0056b3;">${password}</span></li>
-                    </ul>
-                </div>
-                <p style="color: #ff0000; font-size: 0.9em; font-weight: bold; margin-top: 15px;">
-                    ⚠️ Please login and change your password immediately for security reasons.
-                </p>
+    let apiInstance = new Brevo.TransactionalEmailsApi();
+    let sendSmtpEmail = new Brevo.SendSmtpEmail();
+
+    sendSmtpEmail.subject = 'Welcome to Yalla Class - Your Account Details';
+    sendSmtpEmail.htmlContent = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <h3 style="color: #4CAF50;">Hello ${name},</h3>
+            <p>Your account has been created by the Admin on <strong>Yalla Class</strong>.</p>
+            <p>Here are your login credentials:</p>
+            <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; border: 1px solid #ddd;">
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                    <li><strong>Email:</strong> <span style="color: #0056b3;">${email}</span></li>
+                    <li><strong>Password:</strong> <span style="color: #0056b3;">${password}</span></li>
+                </ul>
             </div>
-        `
-    };
+            <p style="color: #ff0000; font-size: 0.9em; font-weight: bold; margin-top: 15px;">
+                ⚠️ Please login and change your password immediately for security reasons.
+            </p>
+        </div>
+    `;
+    
+    // 🌟 اتأكد إن الإيميل ده هو المسجل في حسابك على بريفو
+    sendSmtpEmail.sender = { "name": "Yalla Class Admin", "email": "sebaiahmed964@gmail.com" };
+    sendSmtpEmail.to = [{ "email": email, "name": name }];
 
     try {
-        await transporter.sendMail(mailOptions);
-        console.log(`✅ Email sent successfully to ${email}`);
+        const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
+        console.log(`✅ Email sent successfully via API to ${email}. Message ID:`, data.messageId);
         return { success: true };
     } catch (error) {
-        console.error('❌ Detailed Email Error from Railway:', error);
+        console.error('❌ Detailed Email Error from Brevo API:', error);
         return { success: false, error: error.message };
     }
 };

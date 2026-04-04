@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/OS-Project-t/backend#readme",
   "dependencies": {
+    "@getbrevo/brevo": "^5.0.3",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "body-parser": "^2.2.2",
