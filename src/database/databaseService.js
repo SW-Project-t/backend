@@ -1,9 +1,9 @@
 require('dotenv').config();
 const admin = require('firebase-admin');
-const nodemailer = require('nodemailer'); // 🌟 مكملين بـ Nodemailer لأنه ممتاز مع الجيميل
+const { Resend } = require('resend');
 
 const db = admin.firestore();
-
+const resend = new Resend(process.env.RESEND_API_KEY);
 const checkUserExists = async (email) => {
     try {
         const snapshot = await db.collection('users').where('email', '==', email).get();
@@ -152,48 +152,40 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
 
 // 📧 دالة الإرسال عبر Gmail
 const sendWelcomeEmail = async (email, name, password) => {
-    console.log("⏳ بنحاول نبعت الإيميل دلوقتي مستخدمين Nodemailer وحساب Gmail...");
-
-    // إعداد الاتصال بسيرفر الجيميل
-  const transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 587,
-        secure: false, // true للبورت 465
-        family: 4,    // 🌟 السطر ده بيجبره يستخدم IPv4 عشان يتخطى جدار حماية ريلواي
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS 
-        }
-    });
-
-    const mailOptions = {
-        from: `"Yalla Class Admin" <sebaiahmed964@gmail.com>`,
-        to: email,
-        subject: 'Welcome to Yalla Class - Your Account Details',
-        html: `
-            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <h3 style="color: #4CAF50;">Hello ${name},</h3>
-                <p>Your account has been created by the Admin on <strong>Yalla Class</strong>.</p>
-                <p>Here are your login credentials:</p>
-                <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; border: 1px solid #ddd;">
-                    <ul style="list-style: none; padding: 0; margin: 0;">
-                        <li><strong>Email:</strong> <span style="color: #0056b3;">${email}</span></li>
-                        <li><strong>Password:</strong> <span style="color: #0056b3;">${password}</span></li>
-                    </ul>
-                </div>
-                <p style="color: #ff0000; font-size: 0.9em; font-weight: bold; margin-top: 15px;">
-                    ⚠️ Please login and change your password immediately for security reasons.
-                </p>
-            </div>
-        `
-    };
+    console.log("⏳ بنحاول نبعت الإيميل دلوقتي مستخدمين Resend...");
 
     try {
-        const info = await transporter.sendMail(mailOptions);
-        console.log(`✅ Email sent successfully! Message ID:`, info.messageId);
+        const { data, error } = await resend.emails.send({
+            from: 'Yalla Class Admin <onboarding@resend.dev>',
+            to: email,
+            subject: 'Welcome to Yalla Class - Your Account Details',
+            html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h3 style="color: #4CAF50;">Hello ${name},</h3>
+                    <p>Your account has been created by the Admin on <strong>Yalla Class</strong>.</p>
+                    <p>Here are your login credentials:</p>
+                    <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; border: 1px solid #ddd;">
+                        <ul style="list-style: none; padding: 0; margin: 0;">
+                            <li><strong>Email:</strong> <span style="color: #0056b3;">${email}</span></li>
+                            <li><strong>Password:</strong> <span style="color: #0056b3;">${password}</span></li>
+                        </ul>
+                    </div>
+                    <p style="color: #ff0000; font-size: 0.9em; font-weight: bold; margin-top: 15px;">
+                        ⚠️ Please login and change your password immediately for security reasons.
+                    </p>
+                </div>
+            `
+        });
+
+        if (error) {
+            console.error('❌ Resend Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        console.log(`✅ Email sent successfully! ID:`, data.id);
         return { success: true };
     } catch (error) {
-        console.error('❌ Detailed Email Error from Nodemailer (Gmail):', error);
+        console.error('❌ Detailed Email Error:', error);
         return { success: false, error: error.message };
     }
 };
