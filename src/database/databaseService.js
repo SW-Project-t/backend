@@ -157,8 +157,8 @@ const sendWelcomeEmail = async (email, name, password) => {
     // إعداد الاتصال بسيرفر الجيميل
   const transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
-        port: 465,
-        secure: true, // true للبورت 465
+        port: 587,
+        secure: false, // true للبورت 465
         family: 4,    // 🌟 السطر ده بيجبره يستخدم IPv4 عشان يتخطى جدار حماية ريلواي
         auth: {
             user: process.env.EMAIL_USER,
