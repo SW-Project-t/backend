@@ -1,18 +1,20 @@
 const admin = require('firebase-admin');
-const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG);
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  storageBucket: "yallaclass-5cc62.appspot.com"
-})
-
 if (!admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-    });
+    try {
+        const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG);
+        
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            storageBucket: "yallaclass-5cc62.appspot.com"
+        });
+        console.log("🔥 Firebase Admin initialized successfully!");
+    } catch (error) {
+        console.error("❌ Firebase initialization error:", error.message);
+    }
 }
 
 const auth = admin.auth();
+
 
 const signUp = async (email, password) => {
     try {
