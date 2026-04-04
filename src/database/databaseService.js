@@ -1,5 +1,6 @@
 require('dotenv').config();
 const admin = require('firebase-admin');
+const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
 
 const db = admin.firestore();
