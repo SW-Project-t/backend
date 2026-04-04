@@ -159,6 +159,7 @@ const sendWelcomeEmail = async (email, name, password) => {
         host: 'smtp.gmail.com',
         port: 465,
         secure: true, // true للبورت 465
+        family: 4,    // 🌟 السطر ده بيجبره يستخدم IPv4 عشان يتخطى جدار حماية ريلواي
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS 
