@@ -1,4 +1,7 @@
 require('dotenv').config();
+// 🌟 التعديل السحري: إجبار الـ Node.js على استخدام IPv4 لحل مشكلة فشل الاتصال بإيميل Brevo
+require('dns').setDefaultResultOrder('ipv4first'); 
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const authService = require('./auth/authService'); 
@@ -12,7 +15,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 const bucket = getStorage().bucket("yallaclass-5cc62.appspot.com");
 const { analyzeStudentRisk } = require('./aiService');
 
-// 🌟 التعديل 1: تظبيط الـ CORS بأبسط وأضمن طريقة لحل المشاكل
+// 🌟 التعديل القديم بتاعك: تظبيط الـ CORS بأبسط وأضمن طريقة لحل المشاكل
 const cors = require('cors');
 app.use(cors()); // دي هتفتح الدنيا تماماً بدون أي قيود تسبب إيرورز في الكونسول
 
