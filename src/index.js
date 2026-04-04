@@ -58,12 +58,7 @@ app.post('/admin/add-user', async (req, res) => {
             const dbResult = await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
 
             if (dbResult.success) {
-                
-                // 🚀 هيفضل شغال في الخلفية زي ما أنت حابب عشان ميعملش بطء
-                databaseService.sendWelcomeEmail(email, fullName, password)
-                    .then(() => console.log(`📩 Background: Welcome email sent successfully to ${email}`))
-                    .catch((err) => console.error(`❌ Background Email Error for ${email}:`, err));
-
+                await databaseService.sendWelcomeEmail(email, fullName, password);
                 return res.status(201).json({ 
                     success: true, 
                     message: "User registered, profile created, and email sending in background!" 
