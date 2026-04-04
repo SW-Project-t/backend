@@ -1,6 +1,6 @@
 require('dotenv').config();
 const admin = require('firebase-admin');
-const nodemailer = require('nodemailer'); // 🌟 استخدمنا Nodemailer عشان المفتاح اللي معاك يشتغل فوراً
+const nodemailer = require('nodemailer'); // 🌟 مكملين بـ Nodemailer لأنه ممتاز مع الجيميل
 
 const db = admin.firestore();
 
@@ -150,23 +150,21 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
     }
 };
 
-// 📧 دالة الإرسال الجديدة عبر SMTP
+// 📧 دالة الإرسال عبر Gmail
 const sendWelcomeEmail = async (email, name, password) => {
-    console.log("⏳ بنحاول نبعت الإيميل دلوقتي مستخدمين Nodemailer والـ SMTP بتاع Brevo...");
+    console.log("⏳ بنحاول نبعت الإيميل دلوقتي مستخدمين Nodemailer وحساب Gmail...");
 
-    // إعداد الاتصال بسيرفر بريفو
+    // إعداد الاتصال بسيرفر الجيميل
     const transporter = nodemailer.createTransport({
-        host: 'smtp-relay.brevo.com',
-        port: 587,
-        secure: false, // بورت 587 يتطلب false
+        service: 'gmail',
         auth: {
-            user: process.env.EMAIL_USER, // 👈 هيقرا sebaiahmed964@gmail.com تلقائياً من ريلواي
-            pass: process.env.EMAIL_PASS  // 👈 هيقرا المفتاح (الـ SMTP Password) تلقائياً من ريلواي
+            user: process.env.EMAIL_USER, // 👈 هيقرا sebaiahmed964@gmail.com من ريلواي
+            pass: process.env.EMAIL_PASS  // 👈 ⚠️ هنا هتحط الـ App Password الـ 16 حرف في ريلواي
         }
     });
 
     const mailOptions = {
-        from: `"Yalla Class Admin" <sebaiahmed964@gmail.com>`, // 👈 خليت الإيميل هنا صريح عشان الإرسال يتقبل
+        from: `"Yalla Class Admin" <sebaiahmed964@gmail.com>`,
         to: email,
         subject: 'Welcome to Yalla Class - Your Account Details',
         html: `
@@ -192,7 +190,7 @@ const sendWelcomeEmail = async (email, name, password) => {
         console.log(`✅ Email sent successfully! Message ID:`, info.messageId);
         return { success: true };
     } catch (error) {
-        console.error('❌ Detailed Email Error from Nodemailer:', error);
+        console.error('❌ Detailed Email Error from Nodemailer (Gmail):', error);
         return { success: false, error: error.message };
     }
 };
