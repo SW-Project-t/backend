@@ -4,6 +4,7 @@ const nodemailer = require('nodemailer');
 
 const db = admin.firestore();
 
+// 🚀 الـ Transporter السحري السليم اللي بيحل مشاكل Railway
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
@@ -17,7 +18,6 @@ const transporter = nodemailer.createTransport({
         rejectUnauthorized: false 
     }
 });
-
 
 const checkUserExists = async (email) => {
     try {
@@ -165,10 +165,17 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
     }
 };
 
+// 📩 الدالة المتعدلة بعد تنظيف التعارض
 const sendWelcomeEmail = async (email, name, password) => {
+    console.log("🚀 جاري بدء عملية إرسال الإيميل الترحيبي...");
+    
+    // تشيك سريع في اللوجز على المتغيرات
+    console.log("EMAIL_USER exist?:", !!process.env.EMAIL_USER);
+    console.log("EMAIL_PASS exist?:", !!process.env.EMAIL_PASS);
+
     try {
         const mailOptions = {
-            from: `"Yalla Class" <${process.env.EMAIL_USER}>`, // بيظهر اسم جذاب جنب الإيميل
+            from: `"Yalla Class" <${process.env.EMAIL_USER}>`, // بيقرأ من نفس المتغير اللي فوق
             to: email,
             subject: 'Welcome to the System - Your Account Details',
             html: `
@@ -191,9 +198,13 @@ const sendWelcomeEmail = async (email, name, password) => {
                 </div>
             `
         };
-        await transporter.sendMail(mailOptions);
+
+        console.log("⏳ بنحاول نبعت الإيميل دلوقتي مستخدمين الـ Transporter السحري...");
+        const info = await transporter.sendMail(mailOptions);
         console.log(`✅ Email sent successfully to ${email}`);
+        console.log("📩 رد السيرفر:", info.response);
         return { success: true };
+
     } catch (error) {
         console.error('❌ Detailed Email Error from Railway:', error);
         return { success: false, error: error.message };

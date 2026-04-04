@@ -8,11 +8,14 @@ const app = express();
 const multer = require('multer');
 const { getStorage } = require('firebase-admin/storage');
 const upload = multer({ storage: multer.memoryStorage() });
+
+// تأكد إن firebase-admin تم عمل initialize له قبل السطر ده في ملف السيرفر الأساسي
 const bucket = getStorage().bucket("yallaclass-5cc62.appspot.com");
 const { analyzeStudentRisk } = require('./aiService');
 const cors = require('cors');
+
 app.use(cors({
-  origin: '*', // أو حط لينك موقعك على فايربيز هنا
+  origin: '*', // ممتاز للـ Development، ولو احتجت أمان أكتر حط دومين الفايربيز بتاعك هنا
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -48,7 +51,7 @@ app.post('/admin/add-user', async (req, res) => {
                 role,
                 email,
                 academicYear,
-                code, 
+                code: code || '', 
                 ...userData  
             };
 
@@ -56,7 +59,7 @@ app.post('/admin/add-user', async (req, res) => {
 
             if (dbResult.success) {
                 
-                // ⚠️ التعديل هنا: شيلنا الـ await عشان الإيميل يتبعت في الخلفية وميعملش Timeout
+                // 🚀 هيفضل شغال في الخلفية زي ما أنت حابب عشان ميعملش بطء
                 databaseService.sendWelcomeEmail(email, fullName, password)
                     .then(() => console.log(`📩 Background: Welcome email sent successfully to ${email}`))
                     .catch((err) => console.error(`❌ Background Email Error for ${email}:`, err));
@@ -107,6 +110,7 @@ app.post('/admin/add-users-bulk', async (req, res) => {
             }
 
             try {
+                // ⚠️ السطر ده تم تصليحه بإضافة الـ await
                 const authResult = await authService.signUp(email, password);
 
                 if (authResult.success) {
@@ -123,7 +127,7 @@ app.post('/admin/add-users-bulk', async (req, res) => {
 
                     await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
                     
-                    // ⚠️ التعديل برضه هنا: شيلنا الـ await في الـ Bulk عشان السيرفر ميموتش
+                    // برضه هنا هيرسل في الخلفية ومش هيعطل الـ Loop الكبيرة
                     databaseService.sendWelcomeEmail(email, fullName, password)
                         .then(() => console.log(`📩 Background (Bulk): Email sent to ${email}`))
                         .catch((err) => console.error(`❌ Background Email Error for ${email}:`, err));
@@ -397,7 +401,7 @@ app.post('/admin/add-course', verifyToken, async (req, res) => {
             return res.status(201).json({ 
                 success: true, 
                 message: "Course created successfully!", 
-                courseId: result.id 
+                courseId: result.courseId // تم تعديلها لتوافق الـ databaseService
             });
         } else {
             return res.status(500).json({ success: false, error: result.error });
