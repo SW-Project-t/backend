@@ -5,16 +5,17 @@ const nodemailer = require('nodemailer');
 const db = admin.firestore();
 
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, 
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    tls: {
-        rejectUnauthorized: false 
-    }
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, 
+    family: 4, // 👈 السطر ده سحري هيحل مشكلة الـ ENETUNREACH تماماً!
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    },
+    tls: {
+        rejectUnauthorized: false 
+    }
 });
 
 
