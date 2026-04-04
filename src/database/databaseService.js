@@ -7,11 +7,11 @@ const db = admin.firestore();
 // 🚀 الـ Transporter الجديد الخاص بـ Brevo لتخطي حظر بورتات ريلواي
 const transporter = nodemailer.createTransport({
     host: 'smtp-relay.brevo.com',
-    port: 587,
-    secure: false, // لازم false مع بورت 587
+    port: 465, // 🌟 غيرنا البورت لـ 465
+    secure: true, // 🌟 طالما البورت 465 يبقى لازم دي تكون true
     auth: {
         user: 'a72094001@smtp-brevo.com',
-        pass: process.env.SENDINBLUE_KEY// حط الـ SMTP Key اللي نسخناه
+        pass: process.env.SENDINBLUE_KEY 
     }
 });
 
