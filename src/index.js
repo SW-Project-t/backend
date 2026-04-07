@@ -29,11 +29,13 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
 const cors = require('cors');
+// حط دي قبل أي Routes خالص
 app.use(cors({
-    origin: 'http://localhost:3001', 
-    methods: 'GET,POST,PUT,DELETE',
-    credentials: true
+    origin: true, // هيسمح لأي عنوان يبعت (بما إنك بتبدل بين localhost وهيوست)
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
+
 
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
