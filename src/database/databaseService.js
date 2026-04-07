@@ -2,7 +2,13 @@ require('dotenv').config();
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 
-
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,       
+        pass: process.env.EMAIL_PASS 
+    }
+});
 const db = admin.firestore();
 
 const checkUserExists = async (email) => {
@@ -152,40 +158,31 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
 };
 
 
-const sendWelcomeEmail = async (email, name, password) => {
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.EMAIL_USER, 
-            pass: process.env.EMAIL_PASS 
-        }
-    });
-
+const sendWelcomeEmail = async (email, fullName, password) => {
     try {
-        const info = await transporter.sendMail({
-            from: '"Yalla Class Admin" <sebaiahmed964@gmail.com>', 
-            to: email,
-            subject: 'Welcome to Yalla Class - Your Account Details',
+        const mailOptions = {
+            from: process.env.EMAIL_USER, // المرسل
+            to: email,                    // المستلم
+            subject: 'Welcome to YallaClass!', // عنوان الإيميل
             html: `
-                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                    <h3 style="color: #4CAF50;">Hello ${name},</h3>
-                    <p>Your account has been created by the Admin on <strong>Yalla Class</strong>.</p>
-                    <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px;">
-                        <ul style="list-style: none; padding: 0; margin: 0;">
-                            <li><strong>Email:</strong> <span style="color: #0056b3;">${email}</span></li>
-                            <li><strong>Password:</strong> <span style="color: #0056b3;">${password}</span></li>
-                        </ul>
-                    </div>
-                    <p style="color: #ff0000; font-size: 0.9em; font-weight: bold; margin-top: 15px;">
-                        ⚠️ Please login and change your password immediately for security reasons.
-                    </p>
-                </div>
+                <h3>Hi ${fullName},</h3>
+                <p>Welcome to YallaClass! Your account has been created.</p>
+                <p><strong>Your login details:</strong></p>
+                <ul>
+                    <li>Email: ${email}</li>
+                    <li>Password: ${password}</li>
+                </ul>
+                <p>Please change your password after logging in.</p>
             `
-        });
-        console.log('✅ Email sent successfully!', info.messageId);
+        };
+
+        // عملية الإرسال
+        await transporter.sendMail(mailOptions);
+        console.log(`✅ Email sent successfully to ${email}`);
         return { success: true };
+
     } catch (error) {
-        console.error('❌ Email Error:', error);
+        console.error(`❌ Error sending email to ${email}:`, error);
         return { success: false, error: error.message };
     }
 };
