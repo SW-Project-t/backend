@@ -2,24 +2,45 @@ require('dotenv').config();
 
 const express = require('express');
 const bodyParser = require('body-parser');
+const admin = require('firebase-admin');
+const { getStorage } = require('firebase-admin/storage');
+
+// ✅ التعديل هنا: استخدام ./ عشان يدور في نفس الفولدر (src)
+const serviceAccount = require('./config/service-account-key.json');
+
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        storageBucket: "yallaclass-5cc62.appspot.com"
+    });
+}
+
+const bucket = getStorage().bucket("yallaclass-5cc62.appspot.com");
+
+// بقية الـ requires
 const authService = require('./auth/authService'); 
 const databaseService = require('./database/databaseService'); 
 const verifyToken = require('../middleware/authMiddleware');
+const { analyzeStudentRisk } = require('./aiService');
+const { sendRiskAlertToUser } = require('./notificationService'); 
+
 const app = express();
 const multer = require('multer');
-const { getStorage } = require('firebase-admin/storage');
 const upload = multer({ storage: multer.memoryStorage() });
 
-const bucket = getStorage().bucket("yallaclass-5cc62.appspot.com");
-const { analyzeStudentRisk } = require('./aiService');
-
 const cors = require('cors');
-app.use(cors()); // فتح الـ CORS بأضمن طريقة
+app.use(cors({
+    origin: 'http://localhost:3001', 
+    methods: 'GET,POST,PUT,DELETE',
+    credentials: true
+}));
 
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
-const admin = require('firebase-admin'); 
-const { sendRiskAlertToUser } = require('./notificationService'); 
+
+// ... باقي الكود ...
+
+// ... باقي الكود خله ز ما هو ...
 
 // API: Add Single User
 app.post('/admin/add-user', async (req, res) => {
@@ -563,8 +584,8 @@ app.post('/api/analyze-risk/:uid', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 3001;
-
-app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server is running on port ${PORT}`);
+// Server Listener
+const PORT = 3001;
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
 });

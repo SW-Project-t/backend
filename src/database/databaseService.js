@@ -1,10 +1,10 @@
 require('dotenv').config();
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
-const { Resend } = require('resend');
+
 
 const db = admin.firestore();
-const resend = new Resend(process.env.RESEND_API_KEY);
+
 const checkUserExists = async (email) => {
     try {
         const snapshot = await db.collection('users').where('email', '==', email).get();
@@ -154,18 +154,16 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
 
 const sendWelcomeEmail = async (email, name, password) => {
     const transporter = nodemailer.createTransport({
-        host: 'smtp.sendgrid.net',
-        port: 587,
-        secure: false,
+        service: 'gmail',
         auth: {
-            user: 'apikey',                           // حرفياً الكلمة دي
-            pass: process.env.SENDGRID_API_KEY,
+            user: process.env.EMAIL_USER, 
+            pass: process.env.EMAIL_PASS 
         }
     });
 
     try {
         const info = await transporter.sendMail({
-            from: '"Yalla Class Admin" <your@gmail.com>',
+            from: '"Yalla Class Admin" <sebaiahmed964@gmail.com>', 
             to: email,
             subject: 'Welcome to Yalla Class - Your Account Details',
             html: `
