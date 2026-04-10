@@ -1,10 +1,8 @@
 const admin = require('firebase-admin');
 
-// 1. التعديل هنا: نخليه يتأكد إن الفايربيز شغال، ولو مش شغال يقرأ من الملف المحلي
 if (!admin.apps.length) {
     try {
-        // في اللوكال بنستخدم المسار المباشر للملف اللي حملناه من فايربيز
-        const serviceAccount = require('../serviceAccountKey.json'); // تأكد من المسار صح بالنسبة لمكان الملف ده
+        const serviceAccount = require('../serviceAccountKey.json'); 
         
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
@@ -17,8 +15,6 @@ if (!admin.apps.length) {
 }
 
 const auth = admin.auth();
-
-// باقي الدوال (signUp, getPasswordResetLink, etc.) ممتازة ومش محتاجة تغيير
 const signUp = async (email, password) => {
     try {
         const userRecord = await auth.createUser({
