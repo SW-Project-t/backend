@@ -5,7 +5,6 @@ const bodyParser = require('body-parser');
 const admin = require('firebase-admin');
 const { getStorage } = require('firebase-admin/storage');
 
-// ✅ التعديل هنا: استخدام ./ عشان يدور في نفس الفولدر (src)
 const serviceAccount = require('./config/service-account-key.json');
 
 if (!admin.apps.length) {
@@ -29,9 +28,8 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
 const cors = require('cors');
-// حط دي قبل أي Routes خالص
 app.use(cors({
-    origin: true, // هيسمح لأي عنوان يبعت (بما إنك بتبدل بين localhost وهيوست)
+    origin: true, 
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
@@ -40,11 +38,6 @@ app.use(cors({
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
 
-// ... باقي الكود ...
-
-// ... باقي الكود خله ز ما هو ...
-
-// API: Add Single User
 app.post('/admin/add-user', async (req, res) => {
     try {
         console.log("Data received from Frontend:", req.body);
@@ -77,7 +70,6 @@ app.post('/admin/add-user', async (req, res) => {
             const dbResult = await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
 
             if (dbResult.success) {
-                // 📧 بيبعت الإيميل في الخلفية
                 databaseService.sendWelcomeEmail(email, fullName, password)
                     .then(() => console.log(`📩 Background: Email sent to ${email}`))
                     .catch((err) => console.error(`❌ Background Email Error for ${email}:`, err));
@@ -143,8 +135,6 @@ app.post('/admin/add-users-bulk', async (req, res) => {
                     };
 
                     await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
-                    
-                    // 🌟 التعديل هنا: نخليه ينتظر الإرسال لكل واحد عشان الـ API ميقعش في الـ Bulk
                     try {
                         await databaseService.sendWelcomeEmail(email, fullName, password);
                         console.log(`📩 Email sent successfully to ${email}`);
