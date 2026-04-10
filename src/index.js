@@ -16,13 +16,13 @@ if (!admin.apps.length) {
 
 const bucket = getStorage().bucket("yallaclass-5cc62.appspot.com");
 
-// بقية الـ requires
 const authService = require('./auth/authService'); 
 const databaseService = require('./database/databaseService'); 
 const verifyToken = require('../middleware/authMiddleware');
 const { analyzeStudentRisk } = require('./aiService');
 const { sendRiskAlertToUser } = require('./notificationService');
 const attendanceController = require('./controllers/attendanceController');
+const attendanceTrackingService = require('./services/attendanceTrackingService');
 
 const app = express();
 const multer = require('multer');
@@ -34,7 +34,6 @@ app.use(cors({
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
-
 
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
@@ -101,7 +100,6 @@ app.post('/admin/add-user', async (req, res) => {
     }
 });
 
-// Bulk Add Users Endpoint
 app.post('/admin/add-users-bulk', async (req, res) => {
     try {
         const users = req.body.users; 
@@ -164,7 +162,6 @@ app.post('/admin/add-users-bulk', async (req, res) => {
     }
 });
 
-// API: Get All Users
 app.get('/admin/users', async (req, res) => {
     try {
         const result = await databaseService.getAllUsers();
@@ -191,7 +188,6 @@ app.get('/admin/users', async (req, res) => {
     }
 });
 
-// API: Reset Password
 app.post('/reset-password', async (req, res) => {
     try {
         const { email } = req.body;
@@ -220,7 +216,6 @@ app.post('/reset-password', async (req, res) => {
 
 app.get('/', (req, res) => res.send("Server is ALIVE!"));
 
-// API: Verify Login
 app.post('/verify-login', async (req, res) => {
     try {
         const { idToken } = req.body;
@@ -254,7 +249,6 @@ app.post('/verify-login', async (req, res) => {
     }
 });
 
-// API: Delete User (Auth + Firestore)
 app.delete('/admin/delete-user/:uid', async (req, res) => {
     try {
         const { uid } = req.params; 
@@ -284,7 +278,6 @@ app.delete('/admin/delete-user/:uid', async (req, res) => {
     }
 });
 
-// API: Update User (Firestore)
 app.put('/admin/update-user/:uid', async (req, res) => {
     try {
         const { uid } = req.params;
@@ -335,7 +328,6 @@ app.get('/api/profile', verifyToken, async (req, res) => {
     }
 });
 
-// API: User Updates own profile
 app.put('/api/profile/update', verifyToken, async (req, res) => {
     try {
         const updates = req.body;
@@ -354,7 +346,6 @@ app.put('/api/profile/update', verifyToken, async (req, res) => {
     }
 });
 
-// API: User Changes Password
 app.put('/api/profile/update-password', verifyToken, async (req, res) => {
     try {
         const { newPassword } = req.body;
@@ -374,7 +365,6 @@ app.put('/api/profile/update-password', verifyToken, async (req, res) => {
     }
 });
 
-// API: Get Courses
 app.get('/api/all-courses', verifyToken, async (req, res) => {
     try {
         const result = await databaseService.getAllAvailableCourses();
@@ -392,7 +382,6 @@ app.get('/api/all-courses', verifyToken, async (req, res) => {
     }
 });
 
-// API: Admin Add Course
 app.post('/admin/add-course', verifyToken, async (req, res) => {
    if (req.user.role !== 'admin') {
         return res.status(403).json({ success: false, error: "Forbidden: Admins only" });
@@ -403,7 +392,7 @@ app.post('/admin/add-course', verifyToken, async (req, res) => {
         if (!courseData.courseName || !courseData.instructorName || !courseData.courseId) {
             return res.status(400).json({ 
                 success: false, 
-                error: "Course name,Id and instructor name  are required" 
+                error: "Course name,Id and instructor name are required" 
             });
         }
         const result = await databaseService.addCourse(courseData);
@@ -423,9 +412,7 @@ app.post('/admin/add-course', verifyToken, async (req, res) => {
     }
 });
 
-// API: Bulk Add Courses
 app.post('/admin/add-courses-bulk', verifyToken, async (req, res) => {
-    
     if (req.user.role !== 'admin') {
         return res.status(403).json({ success: false, error: "Forbidden: Admins only" });
     }
@@ -439,7 +426,6 @@ app.post('/admin/add-courses-bulk', verifyToken, async (req, res) => {
 
         const results = []; 
         for (const course of courses) {
-        
             if (!course.courseName || !course.instructorName || !course.courseId) {
                 results.push({ courseId: course.courseId || 'missing', success: false, error: "Missing required fields" });
                 continue;
@@ -470,7 +456,6 @@ app.post('/admin/add-courses-bulk', verifyToken, async (req, res) => {
     }
 });
 
-// API: Upload Profile Image
 app.post('/api/profile/upload-image', verifyToken, upload.single('image'), async (req, res) => {
     try {
         if (!req.file) {
@@ -507,7 +492,6 @@ app.post('/api/profile/upload-image', verifyToken, upload.single('image'), async
     }
 });
 
-// API: Enroll in Course
 app.post('/api/enroll-course', async (req, res) => {
     const { studentUid, courseId } = req.body;
     const result = await databaseService.enrollStudentInCourse(studentUid, courseId);
@@ -518,6 +502,7 @@ app.post('/api/enroll-course', async (req, res) => {
         res.status(500).json(result);
     }
 });
+
 app.delete('/api/unenroll-student', async (req, res) => {
     try {
         const { enrollmentId } = req.body;
@@ -527,6 +512,7 @@ app.delete('/api/unenroll-student', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
 app.post('/api/enroll-student', async (req, res) => {
     try {
         const { studentId, courseId, studentName, studentCode, studentEmail } = req.body;
@@ -545,10 +531,11 @@ app.post('/api/enroll-student', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
 app.get('/api/course-students/:courseId', async (req, res) => {
     try {
         const { courseId } = req.params;
-        console.log("Fetching for course:", courseId); // عشان تشوف الطلب وصل ولا لا في التيرمنال
+        console.log("Fetching for course:", courseId);
 
         const snapshot = await admin.firestore().collection("enrollments")
             .where("courseId", "==", courseId)
@@ -559,7 +546,6 @@ app.get('/api/course-students/:courseId', async (req, res) => {
             ...doc.data()
         }));
 
-        // لازم ترجع JSON حتى لو المصفوفة فاضية
         return res.status(200).json(students);
     } catch (error) {
         console.error(error);
@@ -567,8 +553,6 @@ app.get('/api/course-students/:courseId', async (req, res) => {
     }
 });
 
-
-// API: Update Risk
 app.post('/api/attendance/update-risk', verifyToken, async (req, res) => {
     try {
         const { uid, riskLevel } = req.body; 
@@ -596,7 +580,6 @@ app.post('/api/attendance/update-risk', verifyToken, async (req, res) => {
     }
 });
 
-// API: Analyze Student Risk using AI
 app.post('/api/analyze-risk/:uid', async (req, res) => {
     try {
         const { uid } = req.params;
@@ -628,34 +611,151 @@ app.post('/api/analyze-risk/:uid', async (req, res) => {
 
 // ==================== ATTENDANCE API ROUTES ====================
 
-// Get student attendance
 app.get('/api/attendance/student/:studentId', verifyToken, attendanceController.getStudentAttendanceController);
-
-// Get professor's course attendance
 app.get('/api/attendance/professor/:profId', verifyToken, attendanceController.getProfessorCourseAttendanceController);
 app.get('/api/attendance/professor/:profId/course/:courseId', verifyToken, attendanceController.getProfessorCourseAttendanceController);
-
-// Get all courses attendance (Admin only)
 app.get('/api/attendance/admin/courses', verifyToken, (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json({ success: false, error: "Forbidden: Admins only" });
     }
     attendanceController.getAllCoursesAttendanceController(req, res);
 });
-
-// Record new attendance
 app.post('/api/attendance/record', verifyToken, attendanceController.recordAttendanceController);
-
-// Update attendance record
 app.put('/api/attendance/:recordId', verifyToken, attendanceController.updateAttendanceRecordController);
-
-// Delete attendance record
 app.delete('/api/attendance/:recordId', verifyToken, attendanceController.deleteAttendanceRecordController);
-
-// Get course attendance summary
 app.get('/api/attendance/course/:courseId/summary', verifyToken, attendanceController.getCourseAttendanceSummaryController);
 
-// Server Listener
+// ==================== NEW ATTENDANCE TRACKING API ROUTES ====================
+
+app.get('/api/student/:studentId/courses-attendance', verifyToken, async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        
+        if (req.user.uid !== studentId && req.user.role !== 'admin' && req.user.role !== 'instructor') {
+            return res.status(403).json({ success: false, error: "Unauthorized access" });
+        }
+        
+        const result = await attendanceTrackingService.getStudentCoursesWithAttendance(studentId);
+        
+        if (result.success) {
+            return res.status(200).json({
+                success: true,
+                courses: result.courses
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                error: result.error
+            });
+        }
+    } catch (error) {
+        console.error("Error in getStudentCoursesAttendance:", error);
+        return res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+app.get('/api/admin/courses-attendance', verifyToken, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, error: "Forbidden: Admins only" });
+        }
+        
+        const result = await attendanceTrackingService.getAllCoursesWithAttendanceStats();
+        
+        if (result.success) {
+            return res.status(200).json({
+                success: true,
+                courses: result.courses
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                error: result.error
+            });
+        }
+    } catch (error) {
+        console.error("Error in getAllCoursesAttendanceStats:", error);
+        return res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+app.post('/api/course/attendance/mark', verifyToken, async (req, res) => {
+    try {
+        if (req.user.role !== 'instructor' && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, error: "Forbidden: Instructors only" });
+        }
+        
+        const attendanceData = {
+            ...req.body,
+            recordedBy: req.user.uid
+        };
+        
+        const result = await attendanceTrackingService.markCourseAttendance(attendanceData);
+        
+        if (result.success) {
+            return res.status(200).json({
+                success: true,
+                message: result.message,
+                results: result.results
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                error: result.error
+            });
+        }
+    } catch (error) {
+        console.error("Error in markCourseAttendance:", error);
+        return res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+app.get('/api/course/:courseId/attendance/:date', verifyToken, async (req, res) => {
+    try {
+        const { courseId, date } = req.params;
+        
+        const result = await attendanceTrackingService.getCourseSessionAttendance(courseId, date);
+        
+        if (result.success) {
+            return res.status(200).json({
+                success: true,
+                records: result.records
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                error: result.error
+            });
+        }
+    } catch (error) {
+        console.error("Error in getCourseSessionAttendance:", error);
+        return res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+app.get('/api/course/:courseId/attendance-sessions', verifyToken, async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        
+        const result = await attendanceTrackingService.getCourseAttendanceSessions(courseId);
+        
+        if (result.success) {
+            return res.status(200).json({
+                success: true,
+                sessions: result.sessions
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                error: result.error
+            });
+        }
+    } catch (error) {
+        console.error("Error in getCourseAttendanceSessions:", error);
+        return res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
 const PORT = 3001;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
