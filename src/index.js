@@ -21,7 +21,8 @@ const authService = require('./auth/authService');
 const databaseService = require('./database/databaseService'); 
 const verifyToken = require('../middleware/authMiddleware');
 const { analyzeStudentRisk } = require('./aiService');
-const { sendRiskAlertToUser } = require('./notificationService'); 
+const { sendRiskAlertToUser } = require('./notificationService');
+const attendanceController = require('./controllers/attendanceController');
 
 const app = express();
 const multer = require('multer');
@@ -624,6 +625,35 @@ app.post('/api/analyze-risk/:uid', async (req, res) => {
         res.status(500).json({ success: false, error: "Internal Server Error" });
     }
 });
+
+// ==================== ATTENDANCE API ROUTES ====================
+
+// Get student attendance
+app.get('/api/attendance/student/:studentId', verifyToken, attendanceController.getStudentAttendanceController);
+
+// Get professor's course attendance
+app.get('/api/attendance/professor/:profId', verifyToken, attendanceController.getProfessorCourseAttendanceController);
+app.get('/api/attendance/professor/:profId/course/:courseId', verifyToken, attendanceController.getProfessorCourseAttendanceController);
+
+// Get all courses attendance (Admin only)
+app.get('/api/attendance/admin/courses', verifyToken, (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, error: "Forbidden: Admins only" });
+    }
+    attendanceController.getAllCoursesAttendanceController(req, res);
+});
+
+// Record new attendance
+app.post('/api/attendance/record', verifyToken, attendanceController.recordAttendanceController);
+
+// Update attendance record
+app.put('/api/attendance/:recordId', verifyToken, attendanceController.updateAttendanceRecordController);
+
+// Delete attendance record
+app.delete('/api/attendance/:recordId', verifyToken, attendanceController.deleteAttendanceRecordController);
+
+// Get course attendance summary
+app.get('/api/attendance/course/:courseId/summary', verifyToken, attendanceController.getCourseAttendanceSummaryController);
 
 // Server Listener
 const PORT = 3001;
