@@ -517,6 +517,55 @@ app.post('/api/enroll-course', async (req, res) => {
         res.status(500).json(result);
     }
 });
+app.delete('/api/unenroll-student', async (req, res) => {
+    try {
+        const { enrollmentId } = req.body;
+        await admin.firestore().collection("enrollments").doc(enrollmentId).delete();
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+app.post('/api/enroll-student', async (req, res) => {
+    try {
+        const { studentId, courseId, studentName, studentCode, studentEmail } = req.body;
+        const newEnrollment = {
+            studentId,
+            courseId,
+            studentName,
+            studentCode: studentCode || "",
+            studentEmail: studentEmail || "",
+            enrolledAt: new Date().toISOString(),
+            status: "active"
+        };
+        const docRef = await admin.firestore().collection("enrollments").add(newEnrollment);
+        res.json({ id: docRef.id, ...newEnrollment });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+app.get('/api/course-students/:courseId', async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        console.log("Fetching for course:", courseId); // عشان تشوف الطلب وصل ولا لا في التيرمنال
+
+        const snapshot = await admin.firestore().collection("enrollments")
+            .where("courseId", "==", courseId)
+            .get();
+
+        const students = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        // لازم ترجع JSON حتى لو المصفوفة فاضية
+        return res.status(200).json(students);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: error.message });
+    }
+});
+
 
 // API: Update Risk
 app.post('/api/attendance/update-risk', verifyToken, async (req, res) => {
