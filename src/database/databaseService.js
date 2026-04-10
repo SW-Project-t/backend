@@ -161,9 +161,9 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
 const sendWelcomeEmail = async (email, fullName, password) => {
     try {
         const mailOptions = {
-            from: process.env.EMAIL_USER, // المرسل
-            to: email,                    // المستلم
-            subject: 'Welcome to YallaClass!', // عنوان الإيميل
+            from: process.env.EMAIL_USER, 
+            to: email,                    
+            subject: 'Welcome to YallaClass!', 
             html: `
                 <h3>Hi ${fullName},</h3>
                 <p>Welcome to YallaClass! Your account has been created.</p>
@@ -176,7 +176,6 @@ const sendWelcomeEmail = async (email, fullName, password) => {
             `
         };
 
-        // عملية الإرسال
         await transporter.sendMail(mailOptions);
         console.log(`✅ Email sent successfully to ${email}`);
         return { success: true };
