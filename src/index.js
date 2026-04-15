@@ -553,6 +553,55 @@ app.get('/api/course-students/:courseId', async (req, res) => {
     }
 });
 
+app.get('/api/professor/:profId/students', async (req, res) => {
+    try {
+        const { profId } = req.params;
+        
+        
+        const coursesSnapshot = await admin.firestore().collection("courses")
+            .where("instructorId", "==", profId) 
+            .get();
+
+        const courseIds = coursesSnapshot.docs.map(doc => doc.id);
+
+        if (courseIds.length === 0) {
+            return res.status(200).json({ success: true, students: students });
+        }
+
+        
+        const enrollmentsSnapshot = await admin.firestore().collection("enrollments").get();
+        
+        const students = [];
+        const uniqueStudentIds = new Set();
+
+        enrollmentsSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            if (courseIds.includes(data.courseId) && !uniqueStudentIds.has(data.studentId)) {
+                uniqueStudentIds.add(data.studentId);
+                students.push({
+                    id: data.studentId,
+                    studentName: data.studentName,
+                    studentCode: data.studentCode,
+                    studentEmail: data.studentEmail
+                });
+            }
+        });
+
+        return res.status(200).json({ 
+            success: true, 
+            students: students 
+        });
+
+    } catch (error) {
+        console.error("Error fetching professor students:", error);
+        return res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
+
 app.post('/api/attendance/update-risk', verifyToken, async (req, res) => {
     try {
         const { uid, riskLevel } = req.body; 
@@ -606,6 +655,117 @@ app.post('/api/analyze-risk/:uid', async (req, res) => {
     } catch (error) {
         console.error("Risk Analysis Error:", error);
         res.status(500).json({ success: false, error: "Internal Server Error" });
+    }
+});
+// ==================== MISSING CORE ROUTES (ADMIN, PROFESSOR, STUDENT) ====================
+app.put('/admin/update-course/:courseId', verifyToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, error: "Forbidden: Admins only" });
+    }
+    try {
+        const { courseId } = req.params;
+        const updateData = req.body;
+        await admin.firestore().collection("courses").doc(courseId).update(updateData);
+        return res.status(200).json({ success: true, message: "Course updated successfully" });
+    } catch (error) {
+        console.error("Error updating course:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.delete('/admin/delete-course/:courseId', verifyToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, error: "Forbidden: Admins only" });
+    }
+    try {
+        const { courseId } = req.params;
+        await admin.firestore().collection("courses").doc(courseId).delete();
+    
+        const enrollments = await admin.firestore().collection("enrollments").where("courseId", "==", courseId).get();
+        const batch = admin.firestore().batch();
+        enrollments.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+
+        return res.status(200).json({ success: true, message: "Course and related enrollments deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting course:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/professor/:profId/courses', verifyToken, async (req, res) => {
+    try {
+        const { profId } = req.params;
+        const snapshot = await admin.firestore().collection("courses")
+            .where("instructorId", "==", profId)
+            .get();
+
+        const courses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return res.status(200).json({ success: true, courses: courses });
+    } catch (error) {
+        console.error("Error fetching professor courses:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/student/:studentId/courses', verifyToken, async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const enrollmentsSnapshot = await admin.firestore().collection("enrollments")
+            .where("studentId", "==", studentId)
+            .get();
+
+        if (enrollmentsSnapshot.empty) {
+            return res.status(200).json({ success: true, courses: [] });
+        }
+
+        const courseIds = enrollmentsSnapshot.docs.map(doc => doc.data().courseId);
+        
+        const courses = [];
+        for (const id of courseIds) {
+        const courseDoc = await admin.firestore().collection("courses").doc(id).get();
+            if (courseDoc.exists) {
+                courses.push({ id: courseDoc.id, ...courseDoc.data() });
+            } else {
+    
+                const courseQuery = await admin.firestore().collection("courses").where("courseId", "==", id).get();
+                if (!courseQuery.empty) {
+                    courses.push({ id: courseQuery.docs[0].id, ...courseQuery.docs[0].data() });
+                }
+            }
+        }
+
+        return res.status(200).json({ success: true, courses: courses });
+    } catch (error) {
+        console.error("Error fetching student courses:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/assignments/submit', verifyToken, async (req, res) => {
+    try {
+        const { courseId, studentId, studentName, assignmentId, fileUrl, fileName } = req.body;
+
+        if (!courseId || !studentId || !fileUrl) {
+            return res.status(400).json({ success: false, error: "Missing required fields" });
+        }
+
+        const submissionData = {
+            courseId,
+            studentId,
+            studentName,
+            assignmentId: assignmentId || "general",
+            fileUrl,
+            fileName: fileName || "Assignment File",
+            submittedAt: admin.firestore.FieldValue.serverTimestamp(),
+            status: "submitted"
+        };
+
+        const docRef = await admin.firestore().collection("submissions").add(submissionData);
+        return res.status(200).json({ success: true, submissionId: docRef.id, message: "Assignment submitted successfully" });
+    } catch (error) {
+        console.error("Error submitting assignment:", error);
+        return res.status(500).json({ success: false, error: error.message });
     }
 });
 
