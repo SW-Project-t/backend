@@ -557,18 +557,16 @@ app.get('/api/professor/:profId/students', async (req, res) => {
     try {
         const { profId } = req.params;
         
-        
         const coursesSnapshot = await admin.firestore().collection("courses")
             .where("instructorId", "==", profId) 
             .get();
 
-        const courseIds = coursesSnapshot.docs.map(doc => doc.id);
+        const courseIds = coursesSnapshot.docs.map(doc => doc.data().courseId);
 
         if (courseIds.length === 0) {
-            return res.status(200).json({ success: true, students: students });
+            return res.status(200).json({ success: true, students: [] });
         }
 
-        
         const enrollmentsSnapshot = await admin.firestore().collection("enrollments").get();
         
         const students = [];
@@ -576,12 +574,13 @@ app.get('/api/professor/:profId/students', async (req, res) => {
 
         enrollmentsSnapshot.docs.forEach(doc => {
             const data = doc.data();
+            
             if (courseIds.includes(data.courseId) && !uniqueStudentIds.has(data.studentId)) {
                 uniqueStudentIds.add(data.studentId);
                 students.push({
                     id: data.studentId,
                     studentName: data.studentName,
-                    studentCode: data.studentCode,
+                    studentCode: data.studentCode || "",     
                     studentEmail: data.studentEmail
                 });
             }
