@@ -98,6 +98,52 @@ app.post('/admin/add-user', async (req, res) => {
             error: "An internal server error occurred" 
         });
     }
+})
+app.get('/api/my-courses/:uid', async (req, res) => {
+    try {
+        const { uid } = req.params;
+        
+        // 1. جلب سجلات التسجيل للطالب
+        const enrollmentsSnapshot = await admin.firestore().collection("enrollments")
+            .where("studentId", "==", uid)
+            .get();
+
+        if (enrollmentsSnapshot.empty) {
+            return res.status(200).json({ success: true, courses: [] });
+        }
+
+        const courses = [];
+        
+        // 2. لفة على كل تسجيل عشان نجيب بيانات الكورس بتاعه
+        for (const docItem of enrollmentsSnapshot.docs) {
+            const enrollmentData = docItem.data();
+            const cid = enrollmentData.courseId; // ده الكود اللي اتسجل (مثلاً CS101)
+
+            // 3. البحث عن الكورس في كوليكشن الـ courses باستخدام الـ courseId كـ field
+            const courseQuery = await admin.firestore().collection("courses")
+                .where("courseId", "==", cid)
+                .get();
+
+            if (!courseQuery.empty) {
+                // لو لقاه كـ Field
+                courses.push({ id: courseQuery.docs[0].id, ...courseQuery.docs[0].data() });
+            } else {
+                // محاولة أخيرة: البحث عنه كـ Document ID مباشرة
+                const courseDoc = await admin.firestore().collection("courses").doc(cid).get();
+                if (courseDoc.exists) {
+                    courses.push({ id: courseDoc.id, ...courseDoc.data() });
+                }
+            }
+        }
+
+        // تنظيف القائمة من أي تكرار لو موجود
+        const uniqueCourses = Array.from(new Map(courses.map(c => [c.courseId, c])).values());
+
+        return res.status(200).json({ success: true, courses: uniqueCourses });
+    } catch (error) {
+        console.error("Error in my-courses API:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
 });
 
 app.post('/admin/add-users-bulk', async (req, res) => {
