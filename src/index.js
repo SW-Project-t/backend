@@ -660,7 +660,256 @@ app.get('/api/professor/:profId/students', async (req, res) => {
         });
     }
 });
+// ==================== MESSAGES API ROUTES ====================
 
+// إرسال رسالة (لأي مستخدم)
+app.post('/api/messages/send', verifyToken, async (req, res) => {
+    try {
+        const { to, toId, toName, subject, message, fromName, fromRole } = req.body;
+        
+        if (!to || !toId || !message) {
+            return res.status(400).json({ 
+                success: false, 
+                error: "Missing required fields: to, toId, message" 
+            });
+        }
+
+        const messageData = {
+            from: req.user.role || 'user',
+            fromId: req.user.uid,
+            fromName: fromName || req.user.name || 'User',
+            fromRole: req.user.role || 'user',
+            to: to,
+            toId: toId,
+            toName: toName || (to === 'admin' ? 'System Admin' : 'User'),
+            subject: subject || 'No Subject',
+            message: message,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            read: false,
+            adminRead: to === 'admin' ? false : true
+        };
+
+        const docRef = await admin.firestore().collection("messages").add(messageData);
+        
+        return res.status(200).json({ 
+            success: true, 
+            message: "Message sent successfully",
+            messageId: docRef.id 
+        });
+    } catch (error) {
+        console.error("Error sending message:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// جلب رسائل المستخدم (المستلم)
+app.get('/api/messages/inbox', verifyToken, async (req, res) => {
+    try {
+        const { type } = req.query; // 'admin', 'student', or 'all'
+        
+        let queryRef = admin.firestore().collection("messages")
+            .where("toId", "==", req.user.uid)
+            .orderBy("createdAt", "desc");
+        
+        // إذا كان نوع الرسائل محدداً
+        if (type && type !== 'all') {
+            queryRef = queryRef.where("from", "==", type);
+        }
+        
+        const snapshot = await queryRef.get();
+        
+        const messages = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            messages.push({
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt ? data.createdAt.toDate() : new Date()
+            });
+        });
+        
+        return res.status(200).json({ 
+            success: true, 
+            messages: messages 
+        });
+    } catch (error) {
+        console.error("Error fetching inbox:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// جلب الرسائل المرسلة من المستخدم
+app.get('/api/messages/sent', verifyToken, async (req, res) => {
+    try {
+        const snapshot = await admin.firestore().collection("messages")
+            .where("fromId", "==", req.user.uid)
+            .orderBy("createdAt", "desc")
+            .get();
+        
+        const messages = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            messages.push({
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt ? data.createdAt.toDate() : new Date()
+            });
+        });
+        
+        return res.status(200).json({ 
+            success: true, 
+            messages: messages 
+        });
+    } catch (error) {
+        console.error("Error fetching sent messages:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// تحديث حالة القراءة لرسالة
+app.put('/api/messages/read/:messageId', verifyToken, async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        
+        const messageRef = admin.firestore().collection("messages").doc(messageId);
+        const messageDoc = await messageRef.get();
+        
+        if (!messageDoc.exists) {
+            return res.status(404).json({ success: false, error: "Message not found" });
+        }
+        
+        const messageData = messageDoc.data();
+        
+        // تأكد أن المستخدم هو المستلم الصحيح
+        if (messageData.toId !== req.user.uid) {
+            return res.status(403).json({ success: false, error: "Unauthorized to mark this message as read" });
+        }
+        
+        await messageRef.update({ read: true });
+        
+        return res.status(200).json({ 
+            success: true, 
+            message: "Message marked as read" 
+        });
+    } catch (error) {
+        console.error("Error marking message as read:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// حذف رسالة (للدكتور فقط رسائله الخاصة)
+app.delete('/api/messages/:messageId', verifyToken, async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        
+        const messageRef = admin.firestore().collection("messages").doc(messageId);
+        const messageDoc = await messageRef.get();
+        
+        if (!messageDoc.exists) {
+            return res.status(404).json({ success: false, error: "Message not found" });
+        }
+        
+        const messageData = messageDoc.data();
+        
+        // فقط المرسل أو الأدمن يمكنه حذف الرسالة
+        if (messageData.fromId !== req.user.uid && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, error: "Unauthorized to delete this message" });
+        }
+        
+        await messageRef.delete();
+        
+        return res.status(200).json({ 
+            success: true, 
+            message: "Message deleted successfully" 
+        });
+    } catch (error) {
+        console.error("Error deleting message:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// جلب عدد الرسائل غير المقروءة
+app.get('/api/messages/unread-count', verifyToken, async (req, res) => {
+    try {
+        const snapshot = await admin.firestore().collection("messages")
+            .where("toId", "==", req.user.uid)
+            .where("read", "==", false)
+            .get();
+        
+        return res.status(200).json({ 
+            success: true, 
+            unreadCount: snapshot.size 
+        });
+    } catch (error) {
+        console.error("Error getting unread count:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// جلب جميع الطلاب المسجلين في كورسات دكتور معين (تحسين للموجود)
+app.get('/api/professor/:profId/students-enhanced', verifyToken, async (req, res) => {
+    try {
+        const { profId } = req.params;
+        
+        // التأكد أن المستخدم هو الدكتور نفسه أو أدمن
+        if (req.user.uid !== profId && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, error: "Unauthorized" });
+        }
+        
+        // جلب الكورسات التي يدرسها الدكتور
+        const coursesSnapshot = await admin.firestore().collection("courses")
+            .where("instructorId", "==", profId)
+            .get();
+        
+        const courseIds = coursesSnapshot.docs.map(doc => doc.data().courseId || doc.id);
+        
+        if (courseIds.length === 0) {
+            return res.status(200).json({ success: true, students: [] });
+        }
+        
+        // جلب التسجيلات في هذه الكورسات
+        const enrollmentsSnapshot = await admin.firestore().collection("enrollments")
+            .where("courseId", "in", courseIds)
+            .get();
+        
+        const studentsMap = new Map();
+        
+        for (const doc of enrollmentsSnapshot.docs) {
+            const data = doc.data();
+            const studentId = data.studentId;
+            
+            if (!studentsMap.has(studentId)) {
+                // جلب بيانات الطالب كاملة من users collection
+                const userDoc = await admin.firestore().collection("users").doc(studentId).get();
+                const userData = userDoc.exists ? userDoc.data() : {};
+                
+                studentsMap.set(studentId, {
+                    id: studentId,
+                    studentName: data.studentName || userData.fullName || 'Unknown',
+                    studentCode: data.studentCode || userData.code || '',
+                    studentEmail: data.studentEmail || userData.email || '',
+                    enrolledCourses: [],
+                    status: data.status || 'active'
+                });
+            }
+            
+            studentsMap.get(studentId).enrolledCourses.push({
+                courseId: data.courseId,
+                enrolledAt: data.enrolledAt
+            });
+        }
+        
+        const students = Array.from(studentsMap.values());
+        
+        return res.status(200).json({ 
+            success: true, 
+            students: students 
+        });
+    } catch (error) {
+        console.error("Error fetching professor students enhanced:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
 
 app.post('/api/attendance/update-risk', verifyToken, async (req, res) => {
     try {
