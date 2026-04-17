@@ -539,19 +539,15 @@ app.post('/api/profile/upload-image', verifyToken, upload.single('image'), async
 });
 
 app.post('/api/enroll-course', async (req, res) => {
-    console.log(">>> NEW REQUEST RECEIVED AT /api/enroll-course"); // لو دي مظهرتش يبقى الـ Request مبيوصلش أصلاً
-    console.log(">>> Request Body:", req.body); // ده هيورينا الموبايل باعت إيه بالظبط
-
     try {
-        // تأكد من حالة الأحرف هنا (u كابيتال في studentUid)
-        const { studentUid, courseId } = req.body;
+    
+        const { studentId, courseId } = req.body; 
 
-        if (!studentUid || !courseId) {
-            console.error(">>> ERROR: Missing studentUid or courseId in request body");
-            return res.status(400).json({ success: false, error: "Missing required fields" });
+        if (!studentId || !courseId) {
+            return res.status(400).json({ success: false, error: "Missing studentId or courseId" });
         }
 
-        const result = await databaseService.enrollStudentInCourse(studentUid, courseId);
+        const result = await databaseService.enrollStudentInCourse(studentId, courseId);
 
         if (result.success) {
             res.status(200).json(result);
@@ -559,7 +555,7 @@ app.post('/api/enroll-course', async (req, res) => {
             res.status(400).json(result);
         }
     } catch (error) {
-        console.error(">>> API CRASH ERROR:", error);
+        console.error("API Error:", error);
         res.status(500).json({ success: false, error: "Internal Server Error" });
     }
 });
