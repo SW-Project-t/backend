@@ -128,35 +128,53 @@ const getAllAvailableCourses = async () => {
         return { success: false, error: error.message };
     }
 };
-
 const enrollStudentInCourse = async (studentUid, courseId) => {
-    try {
-        const enrollmentRef = db.collection('enrollments').doc();
-        const courseQuery = await db.collection('courses').where('courseId', '==', courseId).get();
+    console.log("--- DEBUG START ---");
+    console.log("1. Received from API -> studentUid:", studentUid, "| courseId:", courseId);
 
-        if (courseQuery.empty) throw new Error("Course not found");
+    try {
+        if (!studentUid || !courseId) {
+            return { success: false, error: "Missing parameters in Service" };
+        }
+
+        // 2. محاولة البحث عن الكورس
+        const coursesRef = db.collection('courses');
+        const courseQuery = await coursesRef.where('courseId', '==', courseId).get();
+
+        console.log("2. Query executed. Documents found:", courseQuery.size);
+
+        if (courseQuery.empty) {
+            // لو طبعت 0، يبقى المشكلة في اسم الحقل 'CourseId' أو القيمة نفسها
+            console.error(`3. ERROR: Course [${courseId}] not found in Firestore`);
+            return { success: false, error: `Course ${courseId} not found` };
+        }
 
         const courseDoc = courseQuery.docs[0];
         const courseRef = courseDoc.ref;
+        console.log("4. Course document found. Path:", courseRef.path);
+
+        const enrollmentRef = db.collection('enrollments').doc();
 
         await db.runTransaction(async (transaction) => {
             transaction.set(enrollmentRef, {
-                studentUid,
-                courseId,
+                uid: studentUid,
+                courseId: courseId,
                 enrolledAt: admin.firestore.FieldValue.serverTimestamp()
             });
+
             transaction.update(courseRef, {
                 studentsCount: admin.firestore.FieldValue.increment(1)
             });
         });
 
+        console.log("5. Transaction completed successfully!");
         return { success: true };
+
     } catch (error) {
-        console.error("Enrollment error:", error);
+        console.error("--- TRANSACTION ERROR ---:", error.message);
         return { success: false, error: error.message };
     }
 };
-
 
 const sendWelcomeEmail = async (email, fullName, password) => {
     try {
