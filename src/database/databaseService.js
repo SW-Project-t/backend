@@ -204,6 +204,201 @@ const sendWelcomeEmail = async (email, fullName, password) => {
     }
 };
 
+// AI Progress functions
+const addAiProgress = async (progressData) => {
+    try {
+        const docRef = db.collection('ai_progress').doc();
+        await docRef.set({
+            studentId: progressData.studentId,
+            courseId: progressData.courseId || null, // إضافة courseId كاختياري
+            riskLevel: progressData.riskLevel,
+            explanation: progressData.explanation,
+            date: admin.firestore.FieldValue.serverTimestamp()
+        });
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
+
+const getAiProgressForStudent = async (studentId) => {
+    try {
+        const snapshot = await db.collection('ai_progress').where('studentId', '==', studentId).orderBy('date', 'desc').get();
+        const progressList = [];
+        snapshot.forEach(doc => {
+            progressList.push({ id: doc.id, ...doc.data() });
+        });
+        return { success: true, progress: progressList };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
+
+// Departments functions
+const addDepartment = async (departmentData) => {
+    try {
+        const docRef = db.collection('departments').doc();
+        await docRef.set({
+            name: departmentData.name,
+            code: departmentData.code,
+            headOfDepartment: departmentData.headOfDepartment,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
+
+const getAllDepartments = async () => {
+    try {
+        const snapshot = await db.collection('departments').get();
+        const departmentsList = [];
+        snapshot.forEach(doc => {
+            departmentsList.push({ id: doc.id, ...doc.data() });
+        });
+        return { success: true, departments: departmentsList };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
+
+// Sessions functions
+const addSession = async (sessionData) => {
+    try {
+        const docRef = db.collection('sessions').doc();
+        await docRef.set({
+            courseId: sessionData.courseId,
+            professorId: sessionData.professorId,
+            date: sessionData.date,
+            startTime: sessionData.startTime,
+            endTime: sessionData.endTime,
+            isActive: sessionData.isActive || true,
+            location: sessionData.location || null,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        return { success: true, sessionId: docRef.id };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
+
+const getSessionsForCourse = async (courseId) => {
+    try {
+        const snapshot = await db.collection('sessions').where('courseId', '==', courseId).orderBy('date', 'desc').get();
+        const sessionsList = [];
+        snapshot.forEach(doc => {
+            sessionsList.push({ id: doc.id, ...doc.data() });
+        });
+        return { success: true, sessions: sessionsList };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
+
+const updateSessionStatus = async (sessionId, isActive) => {
+    try {
+        await db.collection('sessions').doc(sessionId).update({ isActive });
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
+
+// Enrollments functions
+const addEnrollment = async (enrollmentData) => {
+    try {
+        const docRef = db.collection('enrollments').doc();
+        await docRef.set({
+            studentId: enrollmentData.studentId,
+            courseId: enrollmentData.courseId,
+            totalAbsences: enrollmentData.totalAbsences || 0,
+            grades: enrollmentData.grades || {},
+            enrolledAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
+
+const getEnrollmentsForStudent = async (studentId) => {
+    try {
+        const snapshot = await db.collection('enrollments').where('studentId', '==', studentId).get();
+        const enrollmentsList = [];
+        snapshot.forEach(doc => {
+            enrollmentsList.push({ id: doc.id, ...doc.data() });
+        });
+        return { success: true, enrollments: enrollmentsList };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
+
+const getEnrollmentsForCourse = async (courseId) => {
+    try {
+        const snapshot = await db.collection('enrollments').where('courseId', '==', courseId).get();
+        const enrollmentsList = [];
+        snapshot.forEach(doc => {
+            enrollmentsList.push({ id: doc.id, ...doc.data() });
+        });
+        return { success: true, enrollments: enrollmentsList };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
+
+const updateEnrollment = async (enrollmentId, updates) => {
+    try {
+        await db.collection('enrollments').doc(enrollmentId).update(updates);
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
+
+// Audit Logs functions
+const addAuditLog = async (logData) => {
+    try {
+        const docRef = db.collection('audit_logs').doc();
+        await docRef.set({
+            userId: logData.userId,
+            action: logData.action,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            details: logData.details || null
+        });
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
+
+const getAuditLogs = async (limit = 100) => {
+    try {
+        const snapshot = await db.collection('audit_logs').orderBy('timestamp', 'desc').limit(limit).get();
+        const logsList = [];
+        snapshot.forEach(doc => {
+            logsList.push({ id: doc.id, ...doc.data() });
+        });
+        return { success: true, logs: logsList };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
+
+const getAuditLogsForUser = async (userId, limit = 50) => {
+    try {
+        const snapshot = await db.collection('audit_logs').where('userId', '==', userId).orderBy('timestamp', 'desc').limit(limit).get();
+        const logsList = [];
+        snapshot.forEach(doc => {
+            logsList.push({ id: doc.id, ...doc.data() });
+        });
+        return { success: true, logs: logsList };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
+
 module.exports = { 
     saveUserToFirestore, 
     getUserData, 
@@ -213,5 +408,19 @@ module.exports = {
     addCourse,
     getAllAvailableCourses,
     enrollStudentInCourse,
-    sendWelcomeEmail  
+    sendWelcomeEmail,
+    addAiProgress,
+    getAiProgressForStudent,
+    addDepartment,
+    getAllDepartments,
+    addSession,
+    getSessionsForCourse,
+    updateSessionStatus,
+    addEnrollment,
+    getEnrollmentsForStudent,
+    getEnrollmentsForCourse,
+    updateEnrollment,
+    addAuditLog,
+    getAuditLogs,
+    getAuditLogsForUser
 };

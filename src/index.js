@@ -19,7 +19,7 @@ const bucket = getStorage().bucket("yallaclass-5cc62.appspot.com");
 const authService = require('./auth/authService'); 
 const databaseService = require('./database/databaseService'); 
 const verifyToken = require('../middleware/authMiddleware');
-const { analyzeStudentRisk } = require('./aiService');
+const { analyzeStudentRisk, analyzeCourseRisk } = require('./aiService');
 const { sendRiskAlertToUser } = require('./notificationService');
 const attendanceController = require('./controllers/attendanceController');
 const attendanceTrackingService = require('./services/attendanceTrackingService');
@@ -589,17 +589,47 @@ app.post('/api/enroll-student', async (req, res) => {
         const studentDoc = userQuery.docs[0];
         const studentData = studentDoc.data();
 
-        // 2. نسجل في الـ enrollments البيانات الحقيقية من الداتابيز
+        // 2. جلب عدد الجلسات للمادة لحساب المخاطر الأولية
+        const sessionsResult = await databaseService.getSessionsForCourse(courseId);
+        const totalSessions = sessionsResult.success ? sessionsResult.sessions.length : 10; // افتراضي 10 إذا فشل
+
+        // إنشاء بيانات التسجيل الأولية
+        const enrollmentData = {
+            courseId: courseId,
+            totalAbsences: 0, // غياب أولي 0
+            grades: {}, // درجات فارغة
+            timeliness: 0, // الالتزام الأولي 0
+            totalSessions: totalSessions
+        };
+
+        // 3. حساب المخاطر الأولية للمادة
+        const riskAnalysis = await analyzeCourseRisk(enrollmentData, studentData);
+
+        // 4. نسجل في الـ enrollments البيانات الحقيقية مع المخاطر
         const newEnrollment = {
             uid: studentDoc.id, // الـ UID الحقيقي
             courseId: courseId,
             studentName: studentData.fullName || studentData.name, // الاسم الحقيقي
             studentCode: studentData.code, // الكود الحقيقي
             enrolledAt: admin.firestore.FieldValue.serverTimestamp(),
-            status: "active"
+            status: "active",
+            riskScore: riskAnalysis.riskScore, // إضافة risk score
+            riskLevel: riskAnalysis.riskLevel, // إضافة risk level
+            riskExplanation: riskAnalysis.explanation, // إضافة شرح المخاطر
+            totalAbsences: 0, // غياب أولي
+            grades: {}, // درجات فارغة
+            timeliness: 0 // الالتزام الأولي
         };
 
         const docRef = await admin.firestore().collection("enrollments").add(newEnrollment);
+
+        // 5. إضافة سجل في ai_progress للمادة الجديدة
+        await databaseService.addAiProgress({
+            studentId: studentDoc.id,
+            courseId: courseId,
+            riskLevel: riskAnalysis.riskLevel,
+            explanation: riskAnalysis.explanation
+        });
         
         // نرجع البيانات كاملة للفرونت إيند عشان الجدول يتحدث صح
         res.json({ id: docRef.id, ...newEnrollment });
@@ -1237,6 +1267,397 @@ app.get('/api/course/:courseId/attendance-sessions', verifyToken, async (req, re
     } catch (error) {
         console.error("Error in getCourseAttendanceSessions:", error);
         return res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+// Endpoint لإضافة تقدم AI للطالب
+app.post('/api/ai-progress/add', async (req, res) => {
+    try {
+        const { studentId, riskLevel, explanation } = req.body;
+
+        if (!studentId || !riskLevel || !explanation) {
+            return res.status(400).json({ success: false, error: "studentId, riskLevel, and explanation are required" });
+        }
+
+        const result = await databaseService.addAiProgress({ studentId, riskLevel, explanation });
+
+        if (result.success) {
+            return res.status(201).json({ success: true, message: "AI progress added successfully" });
+        } else {
+            return res.status(400).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        console.error("Add AI Progress Error:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+// Endpoint لجلب تقدم AI لطالب معين
+app.get('/api/ai-progress/:studentId', async (req, res) => {
+    try {
+        const { studentId } = req.params;
+
+        if (!studentId) {
+            return res.status(400).json({ success: false, error: "Student ID is required" });
+        }
+
+        const result = await databaseService.getAiProgressForStudent(studentId);
+
+        if (result.success) {
+            return res.status(200).json({ success: true, progress: result.progress });
+        } else {
+            return res.status(400).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        console.error("Get AI Progress Error:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+// Endpoint لإضافة قسم جديد (مثال)
+app.post('/api/departments/add', async (req, res) => {
+    try {
+        const { name, code, headOfDepartment } = req.body;
+
+        if (!name || !code || !headOfDepartment) {
+            return res.status(400).json({ success: false, error: "Name, code, and headOfDepartment are required" });
+        }
+
+        const result = await databaseService.addDepartment({ name, code, headOfDepartment });
+
+        if (result.success) {
+            return res.status(201).json({ success: true, message: "Department added successfully" });
+        } else {
+            return res.status(400).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        console.error("Add Department Error:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+// Endpoint لجلب جميع الأقسام
+app.get('/api/departments', async (req, res) => {
+    try {
+        const result = await databaseService.getAllDepartments();
+
+        if (result.success) {
+            return res.status(200).json({ success: true, departments: result.departments });
+        } else {
+            return res.status(400).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        console.error("Get Departments Error:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+// Endpoints للجلسات (Sessions)
+// إضافة جلسة جديدة
+app.post('/api/sessions/add', async (req, res) => {
+    try {
+        const { courseId, professorId, date, startTime, endTime, isActive, location } = req.body;
+
+        if (!courseId || !professorId || !date || !startTime || !endTime) {
+            return res.status(400).json({ success: false, error: "courseId, professorId, date, startTime, and endTime are required" });
+        }
+
+        const result = await databaseService.addSession({ courseId, professorId, date, startTime, endTime, isActive, location });
+
+        if (result.success) {
+            return res.status(201).json({ success: true, message: "Session added successfully", sessionId: result.sessionId });
+        } else {
+            return res.status(400).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        console.error("Add Session Error:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+// جلب جلسات مادة معينة
+app.get('/api/sessions/course/:courseId', async (req, res) => {
+    try {
+        const { courseId } = req.params;
+
+        if (!courseId) {
+            return res.status(400).json({ success: false, error: "Course ID is required" });
+        }
+
+        const result = await databaseService.getSessionsForCourse(courseId);
+
+        if (result.success) {
+            return res.status(200).json({ success: true, sessions: result.sessions });
+        } else {
+            return res.status(400).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        console.error("Get Sessions Error:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+// تحديث حالة الجلسة (تفعيل/إلغاء تفعيل)
+app.put('/api/sessions/:sessionId/status', async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const { isActive } = req.body;
+
+        if (typeof isActive !== 'boolean') {
+            return res.status(400).json({ success: false, error: "isActive must be a boolean" });
+        }
+
+        const result = await databaseService.updateSessionStatus(sessionId, isActive);
+
+        if (result.success) {
+            return res.status(200).json({ success: true, message: "Session status updated successfully" });
+        } else {
+            return res.status(400).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        console.error("Update Session Status Error:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+// Endpoints للتسجيلات (Enrollments)
+// إضافة تسجيل جديد
+app.post('/api/enrollments/add', async (req, res) => {
+    try {
+        const { studentId, courseId, totalAbsences, grades } = req.body;
+
+        if (!studentId || !courseId) {
+            return res.status(400).json({ success: false, error: "studentId and courseId are required" });
+        }
+
+        const result = await databaseService.addEnrollment({ studentId, courseId, totalAbsences, grades });
+
+        if (result.success) {
+            return res.status(201).json({ success: true, message: "Enrollment added successfully" });
+        } else {
+            return res.status(400).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        console.error("Add Enrollment Error:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+// جلب تسجيلات طالب معين
+app.get('/api/enrollments/student/:studentId', async (req, res) => {
+    try {
+        const { studentId } = req.params;
+
+        if (!studentId) {
+            return res.status(400).json({ success: false, error: "Student ID is required" });
+        }
+
+        const result = await databaseService.getEnrollmentsForStudent(studentId);
+
+        if (result.success) {
+            return res.status(200).json({ success: true, enrollments: result.enrollments });
+        } else {
+            return res.status(400).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        console.error("Get Enrollments for Student Error:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+// جلب تسجيلات مادة معينة
+app.get('/api/enrollments/course/:courseId', async (req, res) => {
+    try {
+        const { courseId } = req.params;
+
+        if (!courseId) {
+            return res.status(400).json({ success: false, error: "Course ID is required" });
+        }
+
+        const result = await databaseService.getEnrollmentsForCourse(courseId);
+
+        if (result.success) {
+            return res.status(200).json({ success: true, enrollments: result.enrollments });
+        } else {
+            return res.status(400).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        console.error("Get Enrollments for Course Error:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+// تحديث تسجيل (مثل تحديث الغياب أو الدرجات)
+app.put('/api/enrollments/:enrollmentId', async (req, res) => {
+    try {
+        const { enrollmentId } = req.params;
+        const updates = req.body;
+
+        const result = await databaseService.updateEnrollment(enrollmentId, updates);
+
+        if (result.success) {
+            return res.status(200).json({ success: true, message: "Enrollment updated successfully" });
+        } else {
+            return res.status(400).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        console.error("Update Enrollment Error:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+// Endpoints لسجلات المراقبة (Audit Logs)
+// إضافة سجل مراقبة
+app.post('/api/audit-logs/add', async (req, res) => {
+    try {
+        const { userId, action, details } = req.body;
+
+        if (!userId || !action) {
+            return res.status(400).json({ success: false, error: "userId and action are required" });
+        }
+
+        const result = await databaseService.addAuditLog({ userId, action, details });
+
+        if (result.success) {
+            return res.status(201).json({ success: true, message: "Audit log added successfully" });
+        } else {
+            return res.status(400).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        console.error("Add Audit Log Error:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+// جلب سجلات المراقبة (للأدمن)
+app.get('/api/audit-logs', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 100;
+
+        const result = await databaseService.getAuditLogs(limit);
+
+        if (result.success) {
+            return res.status(200).json({ success: true, logs: result.logs });
+        } else {
+            return res.status(400).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        console.error("Get Audit Logs Error:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+// جلب سجلات مراقبة لمستخدم معين
+app.get('/api/audit-logs/user/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const limit = parseInt(req.query.limit) || 50;
+
+        if (!userId) {
+            return res.status(400).json({ success: false, error: "User ID is required" });
+        }
+
+        const result = await databaseService.getAuditLogsForUser(userId, limit);
+
+        if (result.success) {
+            return res.status(200).json({ success: true, logs: result.logs });
+        } else {
+            return res.status(400).json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        console.error("Get Audit Logs for User Error:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+// Endpoint لتحديث المخاطر لجميع الطلاب
+app.post('/api/admin/update-all-risks', verifyToken, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, error: "Forbidden: Admins only" });
+        }
+
+        // جلب جميع الطلاب
+        const usersResult = await databaseService.getAllUsers();
+        if (!usersResult.success) {
+            return res.status(500).json({ success: false, error: "Failed to fetch users" });
+        }
+
+        const students = usersResult.users.filter(user => user.role === 'student');
+        const results = [];
+
+        for (const student of students) {
+            try {
+                // جلب التسجيلات للطالب
+                const enrollmentsResult = await databaseService.getEnrollmentsForStudent(student.uid);
+                if (!enrollmentsResult.success) {
+                    console.error(`Failed to fetch enrollments for student ${student.uid}`);
+                    continue;
+                }
+
+                const enrollments = enrollmentsResult.enrollments;
+
+                for (const enrollment of enrollments) {
+                    try {
+                        // جلب عدد الجلسات للمادة
+                        const sessionsResult = await databaseService.getSessionsForCourse(enrollment.courseId);
+                        const totalSessions = sessionsResult.success ? sessionsResult.sessions.length : 10; // افتراضي 10 إذا فشل
+
+                        // إضافة totalSessions إلى enrollment مؤقتاً
+                        const enrollmentWithSessions = { ...enrollment, totalSessions };
+
+                        // حساب المخاطر للمادة
+                        const analysis = await analyzeCourseRisk(enrollmentWithSessions, student);
+
+                        // إضافة سجل في ai_progress مع courseId
+                        await databaseService.addAiProgress({
+                            studentId: student.uid,
+                            courseId: enrollment.courseId,
+                            riskLevel: analysis.riskLevel,
+                            explanation: analysis.explanation
+                        });
+
+                        results.push({ 
+                            studentId: student.uid, 
+                            courseId: enrollment.courseId, 
+                            success: true, 
+                            riskLevel: analysis.riskLevel 
+                        });
+                    } catch (error) {
+                        console.error(`Error updating risk for student ${student.uid} in course ${enrollment.courseId}:`, error);
+                        results.push({ 
+                            studentId: student.uid, 
+                            courseId: enrollment.courseId, 
+                            success: false, 
+                            error: error.message 
+                        });
+                    }
+                }
+
+                        // تحديث المخاطر العامة للطالب (اختياري)
+                const overallAnalysis = await analyzeStudentRisk(student);
+                await databaseService.updateUserInFirestore(student.uid, { 
+                    riskLevel: overallAnalysis.riskLevel,
+                    riskExplanation: overallAnalysis.explanation,
+                    riskScore: overallAnalysis.riskScore,
+                    riskColor: overallAnalysis.color,
+                    riskIcon: overallAnalysis.icon
+                });
+
+            } catch (error) {
+                console.error(`Error processing student ${student.uid}:`, error);
+                results.push({ studentId: student.uid, success: false, error: error.message });
+            }
+        }
+
+        res.status(200).json({ 
+            success: true, 
+            message: "Risk analysis completed for all students and courses",
+            results: results
+        });
+    } catch (error) {
+        console.error("Update All Risks Error:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
     }
 });
 
