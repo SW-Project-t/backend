@@ -572,17 +572,36 @@ app.delete('/api/unenroll-student', async (req, res) => {
 
 app.post('/api/enroll-student', async (req, res) => {
     try {
-        const { studentId, courseId, studentName, studentCode, studentEmail } = req.body;
+        // بنستقبل الـ studentCode (اللي الدكتور كتبه) والـ courseId
+        const { studentCode, courseId } = req.body; 
+
+        // 1. نبحث عن الطالب في كولكشن users بالكود بتاعه
+        const userQuery = await admin.firestore()
+            .collection("users")
+            .where("code", "==", studentCode)
+            .limit(1)
+            .get();
+
+        if (userQuery.empty) {
+            return res.status(404).json({ error: "الطالب غير موجود بهذا الكود" });
+        }
+
+        const studentDoc = userQuery.docs[0];
+        const studentData = studentDoc.data();
+
+        // 2. نسجل في الـ enrollments البيانات الحقيقية من الداتابيز
         const newEnrollment = {
-            studentId,
-            courseId,
-            studentName,
-            studentCode: studentCode || "",
-            studentEmail: studentEmail || "",
-            enrolledAt: new Date().toISOString(),
+            uid: studentDoc.id, // الـ UID الحقيقي
+            courseId: courseId,
+            studentName: studentData.fullName || studentData.name, // الاسم الحقيقي
+            studentCode: studentData.code, // الكود الحقيقي
+            enrolledAt: admin.firestore.FieldValue.serverTimestamp(),
             status: "active"
         };
+
         const docRef = await admin.firestore().collection("enrollments").add(newEnrollment);
+        
+        // نرجع البيانات كاملة للفرونت إيند عشان الجدول يتحدث صح
         res.json({ id: docRef.id, ...newEnrollment });
     } catch (error) {
         res.status(500).json({ error: error.message });
