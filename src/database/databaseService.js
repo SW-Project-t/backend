@@ -2,13 +2,27 @@ require('dotenv').config();
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 
+const normalizedEmailPass = process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : process.env.EMAIL_PASS;
+const normalizedEmailUser = process.env.EMAIL_USER ? process.env.EMAIL_USER.trim() : process.env.EMAIL_USER;
+
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: {
-        user: process.env.EMAIL_USER,       
-        pass: process.env.EMAIL_PASS 
+        user: normalizedEmailUser,
+        pass: normalizedEmailPass
     }
 });
+
+transporter.verify((error, success) => {
+    if (error) {
+        console.error('❌ Nodemailer transporter verification failed:', error);
+    } else {
+        console.log('✅ Nodemailer transporter is ready to send messages');
+    }
+});
+
 const db = admin.firestore();
 
 const checkUserExists = async (email) => {
@@ -179,9 +193,9 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
 const sendWelcomeEmail = async (email, fullName, password) => {
     try {
         const mailOptions = {
-            from: process.env.EMAIL_USER, 
-            to: email,                    
-            subject: 'Welcome to YallaClass!', 
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Welcome to YallaClass!',
             html: `
                 <h3>Hi ${fullName},</h3>
                 <p>Welcome to YallaClass! Your account has been created.</p>
@@ -194,12 +208,22 @@ const sendWelcomeEmail = async (email, fullName, password) => {
             `
         };
 
+        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+            const missing = [];
+            if (!process.env.EMAIL_USER) missing.push('EMAIL_USER');
+            if (!process.env.EMAIL_PASS) missing.push('EMAIL_PASS');
+            throw new Error(`Missing email config: ${missing.join(', ')}`);
+        }
+
         await transporter.sendMail(mailOptions);
         console.log(`✅ Email sent successfully to ${email}`);
         return { success: true };
 
     } catch (error) {
         console.error(`❌ Error sending email to ${email}:`, error);
+        if (error.response) {
+            console.error('Nodemailer response:', error.response);
+        }
         return { success: false, error: error.message };
     }
 };
