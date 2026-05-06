@@ -30,6 +30,21 @@ const getRiskLevel = (score) => {
     return { level: 'Very Low Risk', color: '#3b82f6', icon: '🔵' };
 };
 
+const parseAIJson = (text) => {
+    if (!text || typeof text !== 'string') return null;
+    const trimmed = text.trim();
+
+    // Remove Markdown code fences if present
+    const codeFenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const jsonText = codeFenceMatch ? codeFenceMatch[1].trim() : trimmed;
+
+    try {
+        return JSON.parse(jsonText);
+    } catch (error) {
+        return null;
+    }
+};
+
 const analyzeStudentRisk = async (studentData) => {
     console.log("Starting AI risk analysis for student:", studentData.uid || studentData.code);
     console.log("Student data received:", {
@@ -74,7 +89,7 @@ Format your response as JSON:
         console.log("Sending prompt to AI...");
 
         const completion = await openai.chat.completions.create({
-            model: "llama3-8b-8192",
+            model: "llama-3.1-8b-instant",
             messages: [
                 {
                     role: "system",
@@ -93,11 +108,9 @@ Format your response as JSON:
         const aiResponse = completion.choices[0].message.content.trim();
 
         // Parse the AI response
-        let analysis;
-        try {
-            analysis = JSON.parse(aiResponse);
-        } catch (parseError) {
-            console.error("AI Response Parse Error:", parseError);
+        let analysis = parseAIJson(aiResponse);
+        if (!analysis) {
+            console.error("AI Response Parse Error: could not parse JSON from response", aiResponse);
             // Fallback to basic calculation if AI fails
             const riskScore = calculateRiskScore(attendanceRate, grades, gpa, timeliness);
             const riskInfo = getRiskLevel(riskScore);
