@@ -977,9 +977,17 @@ app.post('/api/attendance/update-risk', verifyToken, async (req, res) => {
 
 app.post('/api/analyze-risk/:uid', async (req, res) => {
     try {
-        const { uid } = req.params;
+        const { uid: identifier } = req.params;
 
-        const studentData = await databaseService.getUserData(uid);
+        let studentData = await databaseService.getUserData(identifier);
+        let resolvedUid = identifier;
+
+        if (!studentData) {
+            studentData = await databaseService.getUserDataByCode(identifier);
+            if (studentData) {
+                resolvedUid = studentData.uid;
+            }
+        }
 
         if (!studentData) {
             return res.status(404).json({ success: false, error: "Student not found" });
@@ -987,7 +995,7 @@ app.post('/api/analyze-risk/:uid', async (req, res) => {
 
         const analysis = await analyzeStudentRisk(studentData);
 
-        await databaseService.updateUserInFirestore(uid, { 
+        await databaseService.updateUserInFirestore(resolvedUid, { 
             riskLevel: analysis.riskLevel,
             riskExplanation: analysis.explanation 
         });

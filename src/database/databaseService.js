@@ -61,6 +61,25 @@ const getUserData = async (uid) => {
     }
 };
 
+const getUserDataByCode = async (studentCode) => {
+    try {
+        const snapshot = await db.collection('users')
+            .where('code', '==', studentCode)
+            .limit(1)
+            .get();
+
+        if (snapshot.empty) {
+            return null;
+        }
+
+        const userDoc = snapshot.docs[0];
+        return { uid: userDoc.id, ...userDoc.data() };
+    } catch (error) {
+        console.error("Firestore Error (code lookup):", error);
+        throw error;
+    }
+};
+
 const getAllUsers = async () => {
     try {
         const usersSnapshot = await db.collection('users').get();
@@ -424,9 +443,10 @@ const getAuditLogsForUser = async (userId, limit = 50) => {
 
 module.exports = { 
     saveUserToFirestore, 
-    getUserData, 
-    getAllUsers, 
-    deleteUserFromFirestore, 
+    getUserData,
+    getUserDataByCode,
+    getAllUsers,
+    deleteUserFromFirestore,
     updateUserInFirestore,
     addCourse,
     getAllAvailableCourses,
