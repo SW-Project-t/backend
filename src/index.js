@@ -956,17 +956,13 @@ app.post('/api/attendance/update-risk', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, error: "Student UID and riskLevel are required" });
         }
 
-        const dbResult = await databaseService.updateUserInFirestore(uid, { riskLevel: riskLevel });
-
-        if (!dbResult.success) {
-            return res.status(500).json({ success: false, error: "Failed to update database" });
-        }
-
+        // Do not persist the updated risk level to the user document.
+        // This keeps risk metadata out of the users collection.
         await sendRiskAlertToUser(uid, riskLevel);
 
         res.status(200).json({ 
             success: true, 
-            message: "Risk level updated and alert sent successfully." 
+            message: "Risk level updated successfully (not stored in user profile)." 
         });
 
     } catch (error) {
@@ -995,11 +991,8 @@ app.post('/api/analyze-risk/:uid', async (req, res) => {
 
         const analysis = await analyzeStudentRisk(studentData);
 
-        await databaseService.updateUserInFirestore(resolvedUid, { 
-            riskLevel: analysis.riskLevel,
-            riskExplanation: analysis.explanation 
-        });
-
+        // Do not save risk analysis results in the user document.
+        // This keeps AI risk data out of the users collection.
         res.status(200).json({ 
             success: true, 
             message: "Risk analysis completed",
@@ -1636,13 +1629,8 @@ app.post('/api/admin/update-all-risks', verifyToken, async (req, res) => {
 
                         // تحديث المخاطر العامة للطالب (اختياري)
                 const overallAnalysis = await analyzeStudentRisk(student);
-                await databaseService.updateUserInFirestore(student.uid, { 
-                    riskLevel: overallAnalysis.riskLevel,
-                    riskExplanation: overallAnalysis.explanation,
-                    riskScore: overallAnalysis.riskScore,
-                    riskColor: overallAnalysis.color,
-                    riskIcon: overallAnalysis.icon
-                });
+                // Do not persist overall AI risk analysis to the user document.
+                // The result is kept in the analysis response or stored elsewhere if needed.
 
             } catch (error) {
                 console.error(`Error processing student ${student.uid}:`, error);
