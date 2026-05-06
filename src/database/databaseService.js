@@ -17,9 +17,9 @@ const transporter = nodemailer.createTransport({
 
 transporter.verify((error, success) => {
     if (error) {
-        console.error('❌ Nodemailer transporter verification failed:', error);
+        console.error(' Nodemailer transporter verification failed:', error);
     } else {
-        console.log('✅ Nodemailer transporter is ready to send messages');
+        console.log(' Nodemailer transporter is ready to send messages');
     }
 });
 
@@ -151,14 +151,14 @@ const enrollStudentInCourse = async (studentUid, courseId) => {
             return { success: false, error: "Missing parameters in Service" };
         }
 
-        // 2. محاولة البحث عن الكورس
+        
         const coursesRef = db.collection('courses');
         const courseQuery = await coursesRef.where('courseId', '==', courseId).get();
 
         console.log("2. Query executed. Documents found:", courseQuery.size);
 
         if (courseQuery.empty) {
-            // لو طبعت 0، يبقى المشكلة في اسم الحقل 'CourseId' أو القيمة نفسها
+            
             console.error(`3. ERROR: Course [${courseId}] not found in Firestore`);
             return { success: false, error: `Course ${courseId} not found` };
         }
@@ -216,11 +216,11 @@ const sendWelcomeEmail = async (email, fullName, password) => {
         }
 
         await transporter.sendMail(mailOptions);
-        console.log(`✅ Email sent successfully to ${email}`);
+        console.log(` Email sent successfully to ${email}`);
         return { success: true };
 
     } catch (error) {
-        console.error(`❌ Error sending email to ${email}:`, error);
+        console.error(` Error sending email to ${email}:`, error);
         if (error.response) {
             console.error('Nodemailer response:', error.response);
         }
@@ -228,13 +228,12 @@ const sendWelcomeEmail = async (email, fullName, password) => {
     }
 };
 
-// AI Progress functions
 const addAiProgress = async (progressData) => {
     try {
         const docRef = db.collection('ai_progress').doc();
         await docRef.set({
             studentId: progressData.studentId,
-            courseId: progressData.courseId || null, // إضافة courseId كاختياري
+            courseId: progressData.courseId || null, 
             riskLevel: progressData.riskLevel,
             explanation: progressData.explanation,
             date: admin.firestore.FieldValue.serverTimestamp()

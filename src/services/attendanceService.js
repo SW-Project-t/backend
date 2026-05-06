@@ -180,7 +180,6 @@ const getAllCoursesAttendance = async () => {
             });
         }
 
-        // Calculate per-course statistics
         const coursesWithStats = courses.map(course => {
             const courseAttendance = attendanceRecords.filter(a => a.courseId === course.courseId);
             const totalRecords = courseAttendance.length;
@@ -201,7 +200,7 @@ const getAllCoursesAttendance = async () => {
             };
         });
 
-        // Calculate overall statistics
+    
         const totalStudents = coursesWithStats.reduce((sum, c) => sum + (c.attendanceStats.totalRecords || 0), 0);
         const totalPresent = coursesWithStats.reduce((sum, c) => sum + (c.attendanceStats.presentCount || 0), 0);
         const overallAttendanceRate = totalStudents > 0 ? Math.round((totalPresent / totalStudents) * 100) : 0;
@@ -239,7 +238,7 @@ const recordAttendance = async (attendanceData) => {
             recordedBy
         } = attendanceData;
 
-        // Validation
+        
         if (!studentId || !courseId || !status) {
             return { success: false, error: "Student ID, Course ID, and status are required" };
         }

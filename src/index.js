@@ -84,7 +84,7 @@ app.post('/admin/add-user', async (req, res) => {
             if (dbResult.success) {
                 databaseService.sendWelcomeEmail(email, fullName, password)
                     .then(() => console.log(`📩 Background: Email sent to ${email}`))
-                    .catch((err) => console.error(`❌ Background Email Error for ${email}:`, err));
+                    .catch((err) => console.error(` Background Email Error for ${email}:`, err));
 
                 return res.status(201).json({ 
                     success: true, 
@@ -115,7 +115,6 @@ app.get('/api/my-courses/:uid', async (req, res) => {
     try {
         const { uid } = req.params;
         
-        // 1. جلب سجلات التسجيل للطالب
         const enrollmentsSnapshot = await admin.firestore().collection("enrollments")
             .where("studentId", "==", uid)
             .get();
@@ -126,21 +125,20 @@ app.get('/api/my-courses/:uid', async (req, res) => {
 
         const courses = [];
         
-        // 2. لفة على كل تسجيل عشان نجيب بيانات الكورس بتاعه
         for (const docItem of enrollmentsSnapshot.docs) {
             const enrollmentData = docItem.data();
-            const cid = enrollmentData.courseId; // ده الكود اللي اتسجل (مثلاً CS101)
+            const cid = enrollmentData.courseId; 
 
-            // 3. البحث عن الكورس في كوليكشن الـ courses باستخدام الـ courseId كـ field
+            
             const courseQuery = await admin.firestore().collection("courses")
                 .where("courseId", "==", cid)
                 .get();
 
             if (!courseQuery.empty) {
-                // لو لقاه كـ Field
+                
                 courses.push({ id: courseQuery.docs[0].id, ...courseQuery.docs[0].data() });
             } else {
-                // محاولة أخيرة: البحث عنه كـ Document ID مباشرة
+                
                 const courseDoc = await admin.firestore().collection("courses").doc(cid).get();
                 if (courseDoc.exists) {
                     courses.push({ id: courseDoc.id, ...courseDoc.data() });
@@ -148,7 +146,7 @@ app.get('/api/my-courses/:uid', async (req, res) => {
             }
         }
 
-        // تنظيف القائمة من أي تكرار لو موجود
+        
         const uniqueCourses = Array.from(new Map(courses.map(c => [c.courseId, c])).values());
 
         return res.status(200).json({ success: true, courses: uniqueCourses });
@@ -194,9 +192,9 @@ app.post('/admin/add-users-bulk', async (req, res) => {
                     await databaseService.saveUserToFirestore(authResult.uid, finalProfileData);
                     try {
                         await databaseService.sendWelcomeEmail(email, fullName, password);
-                        console.log(`📩 Email sent successfully to ${email}`);
+                        console.log(` Email sent successfully to ${email}`);
                     } catch (emailErr) {
-                        console.error(`❌ Email Error for ${email}:`, emailErr);
+                        console.error(` Email Error for ${email}:`, emailErr);
                     }
 
                     results.push({ email, success: true });
@@ -584,10 +582,10 @@ app.delete('/api/unenroll-student', async (req, res) => {
 
 app.post('/api/enroll-student', async (req, res) => {
     try {
-        // بنستقبل الـ studentCode (اللي الدكتور كتبه) والـ courseId
+    
         const { studentCode, courseId } = req.body; 
 
-        // 1. نبحث عن الطالب في كولكشن users بالكود بتاعه
+        
         const userQuery = await admin.firestore()
             .collection("users")
             .where("code", "==", studentCode)
@@ -601,41 +599,38 @@ app.post('/api/enroll-student', async (req, res) => {
         const studentDoc = userQuery.docs[0];
         const studentData = studentDoc.data();
 
-        // 2. جلب عدد الجلسات للمادة لحساب المخاطر الأولية
+        
         const sessionsResult = await databaseService.getSessionsForCourse(courseId);
-        const totalSessions = sessionsResult.success ? sessionsResult.sessions.length : 10; // افتراضي 10 إذا فشل
+        const totalSessions = sessionsResult.success ? sessionsResult.sessions.length : 10; 
 
-        // إنشاء بيانات التسجيل الأولية
+        
         const enrollmentData = {
             courseId: courseId,
-            totalAbsences: 0, // غياب أولي 0
-            grades: {}, // درجات فارغة
-            timeliness: 0, // الالتزام الأولي 0
+            totalAbsences: 0, 
+            grades: {}, 
+            timeliness: 0, 
             totalSessions: totalSessions
         };
 
-        // 3. حساب المخاطر الأولية للمادة
         const riskAnalysis = await analyzeCourseRisk(enrollmentData, studentData);
 
-        // 4. نسجل في الـ enrollments البيانات الحقيقية مع المخاطر
         const newEnrollment = {
-            uid: studentDoc.id, // الـ UID الحقيقي
+            uid: studentDoc.id, 
             courseId: courseId,
-            studentName: studentData.fullName || studentData.name, // الاسم الحقيقي
-            studentCode: studentData.code, // الكود الحقيقي
+            studentName: studentData.fullName || studentData.name, 
+            studentCode: studentData.code, 
             enrolledAt: admin.firestore.FieldValue.serverTimestamp(),
             status: "active",
-            riskScore: riskAnalysis.riskScore, // إضافة risk score
-            riskLevel: riskAnalysis.riskLevel, // إضافة risk level
-            riskExplanation: riskAnalysis.explanation, // إضافة شرح المخاطر
-            totalAbsences: 0, // غياب أولي
-            grades: {}, // درجات فارغة
-            timeliness: 0 // الالتزام الأولي
+            riskScore: riskAnalysis.riskScore, 
+            riskLevel: riskAnalysis.riskLevel,
+            riskExplanation: riskAnalysis.explanation, 
+            totalAbsences: 0, 
+            grades: {}, 
+            timeliness: 0 
         };
 
         const docRef = await admin.firestore().collection("enrollments").add(newEnrollment);
 
-        // 5. إضافة سجل في ai_progress للمادة الجديدة
         await databaseService.addAiProgress({
             studentId: studentDoc.id,
             courseId: courseId,
@@ -643,7 +638,6 @@ app.post('/api/enroll-student', async (req, res) => {
             explanation: riskAnalysis.explanation
         });
         
-        // نرجع البيانات كاملة للفرونت إيند عشان الجدول يتحدث صح
         res.json({ id: docRef.id, ...newEnrollment });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -717,9 +711,7 @@ app.get('/api/professor/:profId/students', async (req, res) => {
         });
     }
 });
-// ==================== MESSAGES API ROUTES ====================
 
-// إرسال رسالة (لأي مستخدم)
 app.post('/api/messages/send', verifyToken, async (req, res) => {
     try {
         const { to, toId, toName, subject, message, fromName, fromRole } = req.body;
@@ -759,16 +751,15 @@ app.post('/api/messages/send', verifyToken, async (req, res) => {
     }
 });
 
-// جلب رسائل المستخدم (المستلم)
 app.get('/api/messages/inbox', verifyToken, async (req, res) => {
     try {
-        const { type } = req.query; // 'admin', 'student', or 'all'
+        const { type } = req.query; 
         
         let queryRef = admin.firestore().collection("messages")
             .where("toId", "==", req.user.uid)
             .orderBy("createdAt", "desc");
         
-        // إذا كان نوع الرسائل محدداً
+    
         if (type && type !== 'all') {
             queryRef = queryRef.where("from", "==", type);
         }
@@ -795,7 +786,6 @@ app.get('/api/messages/inbox', verifyToken, async (req, res) => {
     }
 });
 
-// جلب الرسائل المرسلة من المستخدم
 app.get('/api/messages/sent', verifyToken, async (req, res) => {
     try {
         const snapshot = await admin.firestore().collection("messages")
@@ -823,7 +813,6 @@ app.get('/api/messages/sent', verifyToken, async (req, res) => {
     }
 });
 
-// تحديث حالة القراءة لرسالة
 app.put('/api/messages/read/:messageId', verifyToken, async (req, res) => {
     try {
         const { messageId } = req.params;
@@ -837,7 +826,6 @@ app.put('/api/messages/read/:messageId', verifyToken, async (req, res) => {
         
         const messageData = messageDoc.data();
         
-        // تأكد أن المستخدم هو المستلم الصحيح
         if (messageData.toId !== req.user.uid) {
             return res.status(403).json({ success: false, error: "Unauthorized to mark this message as read" });
         }
@@ -854,7 +842,6 @@ app.put('/api/messages/read/:messageId', verifyToken, async (req, res) => {
     }
 });
 
-// حذف رسالة (للدكتور فقط رسائله الخاصة)
 app.delete('/api/messages/:messageId', verifyToken, async (req, res) => {
     try {
         const { messageId } = req.params;
@@ -868,7 +855,6 @@ app.delete('/api/messages/:messageId', verifyToken, async (req, res) => {
         
         const messageData = messageDoc.data();
         
-        // فقط المرسل أو الأدمن يمكنه حذف الرسالة
         if (messageData.fromId !== req.user.uid && req.user.role !== 'admin') {
             return res.status(403).json({ success: false, error: "Unauthorized to delete this message" });
         }
@@ -885,7 +871,6 @@ app.delete('/api/messages/:messageId', verifyToken, async (req, res) => {
     }
 });
 
-// جلب عدد الرسائل غير المقروءة
 app.get('/api/messages/unread-count', verifyToken, async (req, res) => {
     try {
         const snapshot = await admin.firestore().collection("messages")
@@ -903,17 +888,14 @@ app.get('/api/messages/unread-count', verifyToken, async (req, res) => {
     }
 });
 
-// جلب جميع الطلاب المسجلين في كورسات دكتور معين (تحسين للموجود)
 app.get('/api/professor/:profId/students-enhanced', verifyToken, async (req, res) => {
     try {
         const { profId } = req.params;
         
-        // التأكد أن المستخدم هو الدكتور نفسه أو أدمن
         if (req.user.uid !== profId && req.user.role !== 'admin') {
             return res.status(403).json({ success: false, error: "Unauthorized" });
         }
         
-        // جلب الكورسات التي يدرسها الدكتور
         const coursesSnapshot = await admin.firestore().collection("courses")
             .where("instructorId", "==", profId)
             .get();
@@ -924,7 +906,6 @@ app.get('/api/professor/:profId/students-enhanced', verifyToken, async (req, res
             return res.status(200).json({ success: true, students: [] });
         }
         
-        // جلب التسجيلات في هذه الكورسات
         const enrollmentsSnapshot = await admin.firestore().collection("enrollments")
             .where("courseId", "in", courseIds)
             .get();
@@ -936,7 +917,6 @@ app.get('/api/professor/:profId/students-enhanced', verifyToken, async (req, res
             const studentId = data.studentId;
             
             if (!studentsMap.has(studentId)) {
-                // جلب بيانات الطالب كاملة من users collection
                 const userDoc = await admin.firestore().collection("users").doc(studentId).get();
                 const userData = userDoc.exists ? userDoc.data() : {};
                 

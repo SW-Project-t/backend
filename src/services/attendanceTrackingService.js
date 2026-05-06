@@ -1,4 +1,3 @@
-// backend/services/attendanceTrackingService.js
 const admin = require('firebase-admin');
 const db = admin.firestore();
 
@@ -13,7 +12,6 @@ const getStudentCoursesWithAttendance = async (studentId) => {
             return { success: false, error: "Student ID is required" };
         }
 
-        // Get student's enrolled courses from user document
         const userDoc = await db.collection('users').doc(studentId).get();
         if (!userDoc.exists) {
             return { success: false, error: "Student not found" };
@@ -26,7 +24,6 @@ const getStudentCoursesWithAttendance = async (studentId) => {
             return { success: true, courses: [] };
         }
 
-        // Get course details
         const courses = [];
         for (const courseId of enrolledCourseIds) {
             const courseQuery = await db.collection('courses').where('courseId', '==', courseId).get();
@@ -35,7 +32,6 @@ const getStudentCoursesWithAttendance = async (studentId) => {
                 const courseDoc = courseQuery.docs[0];
                 const courseData = courseDoc.data();
                 
-                // Get attendance records for this student in this course
                 const attendanceQuery = await db.collection('attendance_records')
                     .where('studentId', '==', studentId)
                     .where('courseId', '==', courseId)
@@ -101,7 +97,6 @@ const getAllCoursesWithAttendanceStats = async () => {
             const courseData = courseDoc.data();
             const courseId = courseData.courseId;
             
-            // Get all enrollments for this course
             const enrollmentsQuery = await db.collection('enrollments')
                 .where('courseId', '==', courseId)
                 .get();
@@ -113,7 +108,6 @@ const getAllCoursesWithAttendanceStats = async () => {
             
             const studentCount = enrolledStudents.length;
             
-            // Get all attendance records for this course
             const attendanceQuery = await db.collection('attendance_records')
                 .where('courseId', '==', courseId)
                 .get();
@@ -123,7 +117,6 @@ const getAllCoursesWithAttendanceStats = async () => {
             let totalLate = 0;
             let totalRecords = 0;
             
-            // Track per-student stats
             const studentStats = {};
             
             attendanceQuery.forEach(doc => {
@@ -134,7 +127,6 @@ const getAllCoursesWithAttendanceStats = async () => {
                 else if (record.status === 'absent') totalAbsent++;
                 else if (record.status === 'late') totalLate++;
                 
-                // Track per student
                 if (!studentStats[record.studentId]) {
                     studentStats[record.studentId] = {
                         studentId: record.studentId,
@@ -153,14 +145,12 @@ const getAllCoursesWithAttendanceStats = async () => {
                 else if (record.status === 'late') studentStats[record.studentId].lateCount++;
             });
             
-            // Calculate attendance rates for each student
             const studentsWithStats = Object.values(studentStats).map(student => ({
                 ...student,
                 attendanceRate: student.totalSessions > 0 ? Math.round((student.presentCount / student.totalSessions) * 100) : 0,
                 absenceRate: student.totalSessions > 0 ? Math.round(((student.absentCount + student.lateCount) / student.totalSessions) * 100) : 0
             }));
             
-            // Calculate average attendance for the course
             const averageAttendance = totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 0;
             const averageAbsence = totalRecords > 0 ? Math.round(((totalAbsent + totalLate) / totalRecords) * 100) : 0;
             
@@ -202,7 +192,6 @@ const markCourseAttendance = async (attendanceData) => {
         const batch = db.batch();
         const attendanceRef = db.collection('attendance_records');
         
-        // Use provided date or today's date
         const date = sessionDate || new Date().toISOString().split('T')[0];
         
         for (const record of records) {
@@ -218,7 +207,6 @@ const markCourseAttendance = async (attendanceData) => {
                 continue;
             }
             
-            // Check if attendance already recorded for this student, course, and date
             const existingQuery = await attendanceRef
                 .where('studentId', '==', studentId)
                 .where('courseId', '==', courseId)
@@ -226,7 +214,6 @@ const markCourseAttendance = async (attendanceData) => {
                 .get();
             
             if (!existingQuery.empty) {
-                // Update existing record
                 const docId = existingQuery.docs[0].id;
                 const updateData = {
                     status: status,
@@ -236,7 +223,6 @@ const markCourseAttendance = async (attendanceData) => {
                 batch.update(attendanceRef.doc(docId), updateData);
                 results.push({ studentId, success: true, action: 'updated' });
             } else {
-                // Create new record
                 const newAttendance = {
                     studentId,
                     studentName: studentName || '',

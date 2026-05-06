@@ -8,9 +8,9 @@ if (!admin.apps.length) {
             credential: admin.credential.cert(serviceAccount),
             storageBucket: "yallaclass-5cc62.appspot.com"
         });
-        console.log("🔥 Firebase Admin initialized successfully (Local Mode)!");
+        console.log(" Firebase Admin initialized successfully (Local Mode)!");
     } catch (error) {
-        console.error("❌ Firebase initialization error:", error.message);
+        console.error(" Firebase initialization error:", error.message);
     }
 }
 
@@ -22,10 +22,10 @@ const signUp = async (email, password) => {
             password: password,
             emailVerified: false,
         });
-        console.log('✅ User created successfully:', userRecord.uid);
+        console.log(' User created successfully:', userRecord.uid);
         return { success: true, uid: userRecord.uid };
     } catch (error) {
-        console.error('❌ Sign Up Error:', error.code); 
+        console.error(' Sign Up Error:', error.code); 
         return { success: false, error: error.code };
     }
 };
