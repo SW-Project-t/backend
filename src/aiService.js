@@ -6,7 +6,6 @@ const openai = new OpenAI({
     baseURL: 'https://api.groq.com/openai/v1',
 });
 
-// دالة حساب المخاطر محلياً
 const calculateRiskScore = (attendanceRate, grades, gpa, timeliness) => {
     const attendanceWeight = 0.2;
     const gradesWeight = 0.4;
@@ -33,16 +32,14 @@ const getRiskLevel = (score) => {
 
 const analyzeStudentRisk = async (studentData) => {
     try {
-        // حساب المخاطر محلياً
         const attendanceRate = studentData.attendancePercentage || 0;
-        const grades = studentData.grades || 0; // افترض أن grades هو متوسط الدرجات
+        const grades = studentData.grades || 0;
         const gpa = studentData.gpa || 0;
-        const timeliness = studentData.timeliness || 0; // افترض أن timeliness هو نسبة الالتزام بالوقت
+        const timeliness = studentData.timeliness || 0;   
 
         const riskScore = calculateRiskScore(attendanceRate, grades, gpa, timeliness);
         const riskInfo = getRiskLevel(riskScore);
 
-        // إنشاء شرح بسيط
         let explanation = `Risk score: ${riskScore}. `;
         if (riskInfo.level === 'High Risk') {
             explanation += 'The student has low attendance, poor grades, or low GPA.';
@@ -68,15 +65,12 @@ const analyzeStudentRisk = async (studentData) => {
     }
 };
 
-// دالة حساب المخاطر لكل مادة
 const analyzeCourseRisk = async (enrollmentData, studentData) => {
     try {
-        // حساب المخاطر بناءً على بيانات المادة
-        const totalSessions = enrollmentData.totalSessions || 10; // افترض عدد الجلسات الإجمالي
+        const totalSessions = enrollmentData.totalSessions || 10; 
         const absences = enrollmentData.totalAbsences || 0;
         const attendanceRate = ((totalSessions - absences) / totalSessions) * 100;
 
-        // حساب متوسط الدرجات إذا كان object
         let grades = enrollmentData.grades;
         if (typeof grades === 'object' && grades !== null) {
             const gradeValues = Object.values(grades).filter(val => typeof val === 'number');
@@ -85,13 +79,12 @@ const analyzeCourseRisk = async (enrollmentData, studentData) => {
             grades = parseFloat(grades) || 0;
         }
 
-        const gpa = studentData.gpa || 0; // GPA العام
-        const timeliness = enrollmentData.timeliness || 0; // الالتزام بالوقت للمادة
+        const gpa = studentData.gpa || 0; 
+        const timeliness = enrollmentData.timeliness || 0; 
 
         const riskScore = calculateRiskScore(attendanceRate, grades, gpa, timeliness);
         const riskInfo = getRiskLevel(riskScore);
 
-        // إنشاء شرح
         let explanation = `Risk score for course ${enrollmentData.courseId}: ${riskScore}. `;
         if (riskInfo.level === 'High Risk') {
             explanation += 'High absences or poor grades in this course.';
