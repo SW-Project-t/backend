@@ -31,6 +31,14 @@ const getRiskLevel = (score) => {
 };
 
 const analyzeStudentRisk = async (studentData) => {
+    console.log("Starting AI risk analysis for student:", studentData.uid || studentData.code);
+    console.log("Student data received:", {
+        attendancePercentage: studentData.attendancePercentage,
+        grades: studentData.grades,
+        gpa: studentData.gpa,
+        timeliness: studentData.timeliness
+    });
+
     try {
         const attendanceRate = studentData.attendancePercentage || 0;
         const grades = studentData.grades || 0;
@@ -62,6 +70,9 @@ Format your response as JSON:
 }
 `;
 
+        console.log("AI API Key present:", !!process.env.GROQ_API_KEY);
+        console.log("Sending prompt to AI...");
+
         const completion = await openai.chat.completions.create({
             model: "llama3-8b-8192",
             messages: [
@@ -78,6 +89,7 @@ Format your response as JSON:
             max_tokens: 500
         });
 
+        console.log("AI API Response received successfully");
         const aiResponse = completion.choices[0].message.content.trim();
 
         // Parse the AI response
@@ -130,6 +142,7 @@ Format your response as JSON:
 
     } catch (error) {
         console.error("AI Risk Analysis Error:", error.message);
+        console.error("Full error:", error);
         // Fallback to basic calculation
         const attendanceRate = studentData.attendancePercentage || 0;
         const grades = studentData.grades || 0;
