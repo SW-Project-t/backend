@@ -4,11 +4,6 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const admin = require('firebase-admin');
 const { getStorage } = require('firebase-admin/storage');
-//text extraction dependencies
-const axios = require('axios');
-const pdfParse = require('pdf-parse');
-const mammoth = require('mammoth');
-
 
 const serviceAccount = {
   type: process.env.FIREBASE_TYPE,
@@ -54,49 +49,6 @@ app.use(cors({
 
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
-// ==================== AI TEXT EXTRACTION ENDPOINT ====================
-app.post('/api/extract-text', async (req, res) => {
-    const { url } = req.body;
-    if (!url) {
-        return res.status(400).json({ error: 'URL is required' });
-    }
-
-    try {
-        // جلب الملف من الرابط
-        const response = await axios.get(url, { responseType: 'arraybuffer' });
-        const buffer = Buffer.from(response.data);
-        const contentType = response.headers['content-type'];
-
-        let text = '';
-
-        // استخراج النص حسب نوع الملف
-        if (contentType === 'application/pdf') {
-            const pdfData = await pdfParse(buffer);
-            text = pdfData.text;
-        } 
-        else if (contentType.includes('presentationml') || url.endsWith('.pptx')) {
-            text = "PPTX extraction not fully supported. Please upload PDF for better AI quiz generation.";
-        }
-        else if (contentType.includes('text/plain')) {
-            text = buffer.toString('utf-8');
-        }
-        else {
-            // محاولة مع mammoth لـ DOCX
-            try {
-                const result = await mammoth.extractRawText({ buffer });
-                text = result.value;
-            } catch (err) {
-                text = "Unsupported file type. Please use PDF or DOCX.";
-            }
-        }
-
-        res.json({ text });
-    } catch (error) {
-        console.error('Extraction error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-//end of ai text
 app.post('/admin/add-user', async (req, res) => {
     try {
         console.log("Data received from Frontend:", req.body);
