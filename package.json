@@ -36,5 +36,9 @@
     "openai": "^6.27.0",
     "pdf-parse": "^2.4.5",
     "resend": "^6.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.1",
+    "typescript": "^6.0.3"
   }
 }
