@@ -176,6 +176,38 @@ Format your response as JSON:
     }
 };
 
+const chatWithAI = async (conversation = [], userMessage) => {
+    try {
+        const messages = [
+            {
+                role: 'system',
+                content: 'You are a friendly, helpful AI assistant for an educational platform. Help students and professors with academic questions, attendance tracking, and general educational support.'
+            },
+            ...conversation.map(item => ({
+                role: item.role,
+                content: item.content
+            })),
+            {
+                role: 'user',
+                content: userMessage
+            }
+        ];
+
+        const completion = await openai.chat.completions.create({
+            model: 'llama-3.1-8b-instant',
+            messages,
+            temperature: 0.7,
+            max_tokens: 500
+        });
+
+        const aiResponse = completion.choices?.[0]?.message?.content?.trim();
+        return aiResponse || 'Sorry, I could not generate a response right now.';
+    } catch (error) {
+        console.error('AI Chat Error:', error.message);
+        return 'Sorry, I could not connect to the AI service at the moment.';
+    }
+};
+
 const analyzeCourseRisk = async (enrollmentData, studentData) => {
     try {
         const totalSessions = enrollmentData.totalSessions || 10; 
@@ -222,4 +254,4 @@ const analyzeCourseRisk = async (enrollmentData, studentData) => {
     }
 };
 
-module.exports = { analyzeStudentRisk, analyzeCourseRisk, calculateRiskScore, getRiskLevel };
+module.exports = { analyzeStudentRisk, analyzeCourseRisk, chatWithAI, calculateRiskScore, getRiskLevel };

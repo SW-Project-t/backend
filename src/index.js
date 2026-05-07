@@ -4,20 +4,39 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const admin = require('firebase-admin');
 const { getStorage } = require('firebase-admin/storage');
+const fs = require('fs');
+const path = require('path');
 
-const serviceAccount = {
-  type: process.env.FIREBASE_TYPE,
-  project_id: process.env.FIREBASE_PROJECT_ID,
-  private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-  private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-  client_email: process.env.FIREBASE_CLIENT_EMAIL,
-  client_id: process.env.FIREBASE_CLIENT_ID,
-  auth_uri: process.env.FIREBASE_AUTH_URI,
-  token_uri: process.env.FIREBASE_TOKEN_URI,
-  auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
-  client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL,
-  universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN
-};
+function loadServiceAccount() {
+  const envServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (envServiceAccount) {
+    try {
+      const serviceAccount = JSON.parse(envServiceAccount);
+      if (serviceAccount.private_key) {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      }
+      console.log('Using FIREBASE_SERVICE_ACCOUNT from .env');
+      return serviceAccount;
+    } catch (error) {
+      console.warn('Invalid FIREBASE_SERVICE_ACCOUNT JSON in .env:', error.message);
+    }
+  }
+
+  const serviceAccountPath = path.resolve(__dirname, 'config', 'service-account-key.json');
+  if (fs.existsSync(serviceAccountPath)) {
+    const serviceAccount = require(serviceAccountPath);
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+    }
+    console.log(`Using service account from ${serviceAccountPath}`);
+    return serviceAccount;
+  }
+
+  console.error('No valid Firebase service account configuration found. Set FIREBASE_SERVICE_ACCOUNT or add src/config/service-account-key.json.');
+  process.exit(1);
+}
+
+const serviceAccount = loadServiceAccount();
 
 if (!admin.apps.length) {
     admin.initializeApp({
@@ -31,7 +50,7 @@ const bucket = getStorage().bucket("yallaclass-5cc62.appspot.com");
 const authService = require('./auth/authService'); 
 const databaseService = require('./database/databaseService'); 
 const verifyToken = require('../middleware/authMiddleware');
-const { analyzeStudentRisk, analyzeCourseRisk } = require('./aiService');
+const { analyzeStudentRisk, analyzeCourseRisk, chatWithAI } = require('./aiService');
 const { sendRiskAlertToUser } = require('./notificationService');
 const attendanceController = require('./controllers/attendanceController');
 const attendanceTrackingService = require('./services/attendanceTrackingService');
@@ -746,6 +765,22 @@ app.post('/api/messages/send', verifyToken, async (req, res) => {
         });
     } catch (error) {
         console.error("Error sending message:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/ai/chat', verifyToken, async (req, res) => {
+    try {
+        const { message, conversation = [] } = req.body;
+
+        if (!message || typeof message !== 'string') {
+            return res.status(400).json({ success: false, error: 'Missing required field: message' });
+        }
+
+        const responseText = await chatWithAI(conversation, message);
+        return res.status(200).json({ success: true, response: responseText });
+    } catch (error) {
+        console.error('AI chat route error:', error);
         return res.status(500).json({ success: false, error: error.message });
     }
 });
