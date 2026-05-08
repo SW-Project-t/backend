@@ -6,15 +6,20 @@ const openai = new OpenAI({
     baseURL: 'https://api.groq.com/openai/v1',
 });
 
+const normalizeNumericInput = (value) => {
+    const number = parseFloat(value);
+    return Number.isFinite(number) ? number : 0;
+};
+
 const calculateRiskScore = (attendanceRate, grades, gpa, timeliness) => {
     const attendanceWeight = 0.2;
     const gradesWeight = 0.4;
     const gpaWeight = 0.2;
     const timelinessWeight = 0.2;
-    const attendanceScore = attendanceRate || 0;
-    const gradesScore = grades || 0;
-    const gpaScore = (parseFloat(gpa) || 0) * 25;
-    const timelinessScore = timeliness || 0; 
+    const attendanceScore = normalizeNumericInput(attendanceRate);
+    const gradesScore = normalizeNumericInput(grades);
+    const gpaScore = normalizeNumericInput(gpa) * 25;
+    const timelinessScore = normalizeNumericInput(timeliness);
     const riskScore = (attendanceScore * attendanceWeight) + 
                       (gradesScore * gradesWeight) + 
                       (gpaScore * gpaWeight) + 
@@ -55,14 +60,19 @@ const analyzeStudentRisk = async (studentData) => {
     });
 
     try {
-        const attendanceRate = studentData.attendancePercentage || 0;
-        const grades = studentData.grades || 0;
-        const gpa = studentData.gpa || 0;
-        const timeliness = studentData.timeliness || 0;
+        const attendanceRate = normalizeNumericInput(studentData.attendancePercentage);
+        const grades = normalizeNumericInput(studentData.grades);
+        const gpa = normalizeNumericInput(studentData.gpa);
+        const timeliness = normalizeNumericInput(studentData.timeliness);
+        const zeroDataNote = attendanceRate === 0 && grades === 0 && gpa === 0 && timeliness === 0
+            ? 'Note: all provided student metrics are zero or missing. Still provide a valid risk assessment and explain how the lack of data impacts the evaluation.'
+            : '';
 
         // Create a comprehensive prompt for AI analysis
         const prompt = `
-You are an AI educational assistant analyzing student risk factors. Based on the following student data, provide a detailed risk assessment:
+You are an AI educational assistant analyzing student risk factors. Based on the following student data, provide a detailed risk assessment.
+
+${zeroDataNote}
 
 Student Data:
 - Attendance Rate: ${attendanceRate}%
@@ -109,14 +119,14 @@ Format your response as JSON:
 
         // Parse the AI response
         let analysis = parseAIJson(aiResponse);
-        if (!analysis) {
-            console.error("AI Response Parse Error: could not parse JSON from response", aiResponse);
-            // Fallback to basic calculation if AI fails
+        if (!analysis || typeof analysis.riskScore !== 'number' || !analysis.riskLevel) {
+            console.error("AI Response Parse Error: could not parse valid JSON from response", aiResponse);
+            // Fallback to basic calculation if AI fails or returns invalid values
             const riskScore = calculateRiskScore(attendanceRate, grades, gpa, timeliness);
             const riskInfo = getRiskLevel(riskScore);
             analysis = {
                 riskLevel: riskInfo.level,
-                explanation: `AI analysis failed, using fallback calculation. Risk score: ${riskScore}. ${riskInfo.level} based on attendance, grades, GPA, and timeliness.`,
+                explanation: `AI analysis failed or returned invalid output, using fallback calculation. Risk score: ${riskScore}. ${riskInfo.level} based on attendance, grades, GPA, and timeliness.`,
                 recommendations: "Please review attendance records, grades, and academic performance.",
                 riskScore: riskScore
             };

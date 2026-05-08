@@ -32,11 +32,18 @@ const getStudentCoursesWithAttendance = async (studentId) => {
                 const courseDoc = courseQuery.docs[0];
                 const courseData = courseDoc.data();
                 
-                const attendanceQuery = await db.collection('attendance_records')
+                let attendanceQuery = await db.collection('attendance')
                     .where('studentId', '==', studentId)
                     .where('courseId', '==', courseId)
                     .get();
                 
+                if (attendanceQuery.empty) {
+                    attendanceQuery = await db.collection('attendance_records')
+                        .where('studentId', '==', studentId)
+                        .where('courseId', '==', courseId)
+                        .get();
+                }
+
                 const attendanceRecords = [];
                 let presentCount = 0;
                 let absentCount = 0;
