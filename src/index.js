@@ -990,8 +990,8 @@ app.post('/api/attendance/update-risk', verifyToken, async (req, res) => {
             return res.status(400).json({ success: false, error: "Student UID and riskLevel are required" });
         }
 
-        // Do not persist the updated risk level to the user document.
-        // This keeps risk metadata out of the users collection.
+        
+        
         await sendRiskAlertToUser(uid, riskLevel);
 
         res.status(200).json({ 
@@ -1025,8 +1025,8 @@ app.post('/api/analyze-risk/:uid', async (req, res) => {
 
         const analysis = await analyzeStudentRisk(studentData);
 
-        // Do not save risk analysis results in the user document.
-        // This keeps AI risk data out of the users collection.
+        
+        
         res.status(200).json({ 
             success: true, 
             message: "Risk analysis completed",
@@ -1038,7 +1038,7 @@ app.post('/api/analyze-risk/:uid', async (req, res) => {
         res.status(500).json({ success: false, error: "Internal Server Error" });
     }
 });
-// ==================== MISSING CORE ROUTES (ADMIN, PROFESSOR, STUDENT) ====================
+
 app.put('/admin/update-course/:courseId', verifyToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json({ success: false, error: "Forbidden: Admins only" });
@@ -1150,7 +1150,7 @@ app.post('/api/assignments/submit', verifyToken, async (req, res) => {
     }
 });
 
-// ==================== ATTENDANCE API ROUTES ====================
+
 
 app.get('/api/attendance/student/:studentId', verifyToken, attendanceController.getStudentAttendanceController);
 app.get('/api/attendance/professor/:profId', verifyToken, attendanceController.getProfessorCourseAttendanceController);
@@ -1166,7 +1166,7 @@ app.put('/api/attendance/:recordId', verifyToken, attendanceController.updateAtt
 app.delete('/api/attendance/:recordId', verifyToken, attendanceController.deleteAttendanceRecordController);
 app.get('/api/attendance/course/:courseId/summary', verifyToken, attendanceController.getCourseAttendanceSummaryController);
 
-// ==================== NEW ATTENDANCE TRACKING API ROUTES ====================
+
 
 app.get('/api/student/:studentId/courses-attendance', verifyToken, async (req, res) => {
     try {
@@ -1297,7 +1297,7 @@ app.get('/api/course/:courseId/attendance-sessions', verifyToken, async (req, re
     }
 });
 
-// Endpoint لإضافة تقدم AI للطالب
+
 app.post('/api/ai-progress/add', async (req, res) => {
     try {
         const { studentId, riskLevel, explanation } = req.body;
@@ -1319,7 +1319,7 @@ app.post('/api/ai-progress/add', async (req, res) => {
     }
 });
 
-// Endpoint لجلب تقدم AI لطالب معين
+
 app.get('/api/ai-progress/:studentId', async (req, res) => {
     try {
         const { studentId } = req.params;
@@ -1341,7 +1341,7 @@ app.get('/api/ai-progress/:studentId', async (req, res) => {
     }
 });
 
-// Endpoint لإضافة قسم جديد (مثال)
+
 app.post('/api/departments/add', async (req, res) => {
     try {
         const { name, code, headOfDepartment } = req.body;
@@ -1363,7 +1363,7 @@ app.post('/api/departments/add', async (req, res) => {
     }
 });
 
-// Endpoint لجلب جميع الأقسام
+
 app.get('/api/departments', async (req, res) => {
     try {
         const result = await databaseService.getAllDepartments();
@@ -1379,8 +1379,8 @@ app.get('/api/departments', async (req, res) => {
     }
 });
 
-// Endpoints للجلسات (Sessions)
-// إضافة جلسة جديدة
+
+
 app.post('/api/sessions/add', async (req, res) => {
     try {
         const { courseId, professorId, date, startTime, endTime, isActive, location } = req.body;
@@ -1402,7 +1402,7 @@ app.post('/api/sessions/add', async (req, res) => {
     }
 });
 
-// جلب جلسات مادة معينة
+
 app.get('/api/sessions/course/:courseId', async (req, res) => {
     try {
         const { courseId } = req.params;
@@ -1424,7 +1424,7 @@ app.get('/api/sessions/course/:courseId', async (req, res) => {
     }
 });
 
-// تحديث حالة الجلسة (تفعيل/إلغاء تفعيل)
+
 app.put('/api/sessions/:sessionId/status', async (req, res) => {
     try {
         const { sessionId } = req.params;
@@ -1447,8 +1447,8 @@ app.put('/api/sessions/:sessionId/status', async (req, res) => {
     }
 });
 
-// Endpoints للتسجيلات (Enrollments)
-// إضافة تسجيل جديد
+
+
 app.post('/api/enrollments/add', async (req, res) => {
     try {
         const { studentId, courseId, totalAbsences, grades } = req.body;
@@ -1470,7 +1470,7 @@ app.post('/api/enrollments/add', async (req, res) => {
     }
 });
 
-// جلب تسجيلات طالب معين
+
 app.get('/api/enrollments/student/:studentId', async (req, res) => {
     try {
         const { studentId } = req.params;
@@ -1492,7 +1492,7 @@ app.get('/api/enrollments/student/:studentId', async (req, res) => {
     }
 });
 
-// جلب تسجيلات مادة معينة
+
 app.get('/api/enrollments/course/:courseId', async (req, res) => {
     try {
         const { courseId } = req.params;
@@ -1514,7 +1514,7 @@ app.get('/api/enrollments/course/:courseId', async (req, res) => {
     }
 });
 
-// تحديث تسجيل (مثل تحديث الغياب أو الدرجات)
+
 app.put('/api/enrollments/:enrollmentId', async (req, res) => {
     try {
         const { enrollmentId } = req.params;
@@ -1533,8 +1533,8 @@ app.put('/api/enrollments/:enrollmentId', async (req, res) => {
     }
 });
 
-// Endpoints لسجلات المراقبة (Audit Logs)
-// إضافة سجل مراقبة
+
+
 app.post('/api/audit-logs/add', async (req, res) => {
     try {
         const { userId, action, details } = req.body;
@@ -1556,7 +1556,7 @@ app.post('/api/audit-logs/add', async (req, res) => {
     }
 });
 
-// جلب سجلات المراقبة (للأدمن)
+
 app.get('/api/audit-logs', async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 100;
@@ -1574,7 +1574,7 @@ app.get('/api/audit-logs', async (req, res) => {
     }
 });
 
-// جلب سجلات مراقبة لمستخدم معين
+
 app.get('/api/audit-logs/user/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
@@ -1597,14 +1597,14 @@ app.get('/api/audit-logs/user/:userId', async (req, res) => {
     }
 });
 
-// Endpoint لتحديث المخاطر لجميع الطلاب
+
 app.post('/api/admin/update-all-risks', verifyToken, async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
             return res.status(403).json({ success: false, error: "Forbidden: Admins only" });
         }
 
-        // جلب جميع الطلاب
+        
         const usersResult = await databaseService.getAllUsers();
         if (!usersResult.success) {
             return res.status(500).json({ success: false, error: "Failed to fetch users" });
@@ -1615,7 +1615,7 @@ app.post('/api/admin/update-all-risks', verifyToken, async (req, res) => {
 
         for (const student of students) {
             try {
-                // جلب التسجيلات للطالب
+                
                 const enrollmentsResult = await databaseService.getEnrollmentsForStudent(student.uid);
                 if (!enrollmentsResult.success) {
                     console.error(`Failed to fetch enrollments for student ${student.uid}`);
@@ -1626,17 +1626,17 @@ app.post('/api/admin/update-all-risks', verifyToken, async (req, res) => {
 
                 for (const enrollment of enrollments) {
                     try {
-                        // جلب عدد الجلسات للمادة
+                        
                         const sessionsResult = await databaseService.getSessionsForCourse(enrollment.courseId);
-                        const totalSessions = sessionsResult.success ? sessionsResult.sessions.length : 10; // افتراضي 10 إذا فشل
+                        const totalSessions = sessionsResult.success ? sessionsResult.sessions.length : 10; 
 
-                        // إضافة totalSessions إلى enrollment مؤقتاً
+                        
                         const enrollmentWithSessions = { ...enrollment, totalSessions };
 
-                        // حساب المخاطر للمادة
+                        
                         const analysis = await analyzeCourseRisk(enrollmentWithSessions, student);
 
-                        // إضافة سجل في ai_progress مع courseId
+                        
                         await databaseService.addAiProgress({
                             studentId: student.uid,
                             courseId: enrollment.courseId,
@@ -1661,10 +1661,10 @@ app.post('/api/admin/update-all-risks', verifyToken, async (req, res) => {
                     }
                 }
 
-                        // تحديث المخاطر العامة للطالب (اختياري)
+                        
                 const overallAnalysis = await analyzeStudentRisk(student);
-                // Do not persist overall AI risk analysis to the user document.
-                // The result is kept in the analysis response or stored elsewhere if needed.
+                
+                
 
             } catch (error) {
                 console.error(`Error processing student ${student.uid}:`, error);

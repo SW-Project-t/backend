@@ -2,18 +2,18 @@ require('dotenv').config();
 const admin = require('firebase-admin');
 const db = admin.firestore();
 
-/**
- * Get attendance records for a specific student
- * @param {string} studentId - The student's UID
- * @returns {Promise<{success: boolean, attendance?: Array, error?: string}>}
- */
+
+
+
+
+
 const getStudentAttendance = async (studentId) => {
     try {
         if (!studentId) {
             return { success: false, error: "Student ID is required" };
         }
 
-        // Query attendance records for the student
+        
         const attendanceRef = db.collection('attendance_records');
         const q = attendanceRef.where('studentId', '==', studentId);
         const snapshot = await q.get();
@@ -30,7 +30,7 @@ const getStudentAttendance = async (studentId) => {
             });
         });
 
-        // Calculate summary statistics
+        
         const totalRecords = attendanceRecords.length;
         const presentCount = attendanceRecords.filter(r => r.status === 'present').length;
         const lateCount = attendanceRecords.filter(r => r.status === 'late').length;
@@ -54,19 +54,19 @@ const getStudentAttendance = async (studentId) => {
     }
 };
 
-/**
- * Get attendance records for a professor's course
- * @param {string} profId - The professor's UID
- * @param {string} [courseId] - Optional specific course ID
- * @returns {Promise<{success: boolean, attendance?: Array, courses?: Array, error?: string}>}
- */
+
+
+
+
+
+
 const getProfessorCourseAttendance = async (profId, courseId = null) => {
     try {
         if (!profId) {
             return { success: false, error: "Professor ID is required" };
         }
 
-        // First, get the professor's courses
+        
         const professorCoursesRef = db.collection('professorCourses');
         let profCoursesQuery = professorCoursesRef.where('professorId', '==', profId);
         
@@ -92,7 +92,7 @@ const getProfessorCourseAttendance = async (profId, courseId = null) => {
             courseIds.push(courseData.courseId);
         });
 
-        // Get attendance records for these courses
+        
         const attendanceRef = db.collection('attendance_records');
         const attendanceQuery = attendanceRef.where('courseId', 'in', courseIds);
         const attendanceSnapshot = await attendanceQuery.get();
@@ -107,7 +107,7 @@ const getProfessorCourseAttendance = async (profId, courseId = null) => {
             });
         }
 
-        // Calculate per-course statistics
+        
         const coursesWithStats = courses.map(course => {
             const courseAttendance = attendanceRecords.filter(a => a.courseId === course.courseId);
             const totalRecords = courseAttendance.length;
@@ -139,13 +139,13 @@ const getProfessorCourseAttendance = async (profId, courseId = null) => {
     }
 };
 
-/**
- * Get attendance data for all courses (Admin)
- * @returns {Promise<{success: boolean, courses?: Array, error?: string}>}
- */
+
+
+
+
 const getAllCoursesAttendance = async () => {
     try {
-        // Get all courses
+        
         const coursesRef = db.collection('courses');
         const coursesSnapshot = await coursesRef.get();
 
@@ -165,7 +165,7 @@ const getAllCoursesAttendance = async () => {
             courseIds.push(courseData.courseId);
         });
 
-        // Get attendance records for all courses
+        
         const attendanceRef = db.collection('attendance_records');
         const attendanceQuery = attendanceRef.where('courseId', 'in', courseIds);
         const attendanceSnapshot = await attendanceQuery.get();
@@ -221,11 +221,11 @@ const getAllCoursesAttendance = async () => {
     }
 };
 
-/**
- * Record new attendance for a student
- * @param {Object} attendanceData - The attendance data to record
- * @returns {Promise<{success: boolean, id?: string, error?: string}>}
- */
+
+
+
+
+
 const recordAttendance = async (attendanceData) => {
     try {
         const {
@@ -254,7 +254,7 @@ const recordAttendance = async (attendanceData) => {
             courseId,
             courseName: courseName || '',
             status,
-            date: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+            date: new Date().toISOString().split('T')[0], 
             timestamp: admin.firestore.FieldValue.serverTimestamp(),
             recordedBy: recordedBy || ''
         };
@@ -272,12 +272,12 @@ const recordAttendance = async (attendanceData) => {
     }
 };
 
-/**
- * Update an existing attendance record
- * @param {string} recordId - The attendance record ID
- * @param {Object} updates - The fields to update
- * @returns {Promise<{success: boolean, error?: string}>}
- */
+
+
+
+
+
+
 const updateAttendanceRecord = async (recordId, updates) => {
     try {
         if (!recordId) {
@@ -309,11 +309,11 @@ const updateAttendanceRecord = async (recordId, updates) => {
     }
 };
 
-/**
- * Delete an attendance record
- * @param {string} recordId - The attendance record ID
- * @returns {Promise<{success: boolean, error?: string}>}
- */
+
+
+
+
+
 const deleteAttendanceRecord = async (recordId) => {
     try {
         if (!recordId) {
@@ -332,11 +332,11 @@ const deleteAttendanceRecord = async (recordId) => {
     }
 };
 
-/**
- * Get attendance summary for a specific course
- * @param {string} courseId - The course ID
- * @returns {Promise<{success: boolean, summary?: Object, error?: string}>}
- */
+
+
+
+
+
 const getCourseAttendanceSummary = async (courseId) => {
     try {
         if (!courseId) {

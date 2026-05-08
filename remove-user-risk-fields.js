@@ -44,7 +44,7 @@ function loadServiceAccount() {
 
 function base64UrlEncode(value) {
   const buffer = Buffer.isBuffer(value) ? value : Buffer.from(value);
-  return buffer.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return buffer.toString('base64').replace(/\+/g, '-').replace(/\
 }
 
 async function getGoogleServerTime() {

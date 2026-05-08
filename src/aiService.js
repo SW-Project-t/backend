@@ -39,7 +39,7 @@ const parseAIJson = (text) => {
     if (!text || typeof text !== 'string') return null;
     const trimmed = text.trim();
 
-    // Remove Markdown code fences if present
+    
     const codeFenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
     const jsonText = codeFenceMatch ? codeFenceMatch[1].trim() : trimmed;
 
@@ -68,7 +68,7 @@ const analyzeStudentRisk = async (studentData) => {
             ? 'Note: all provided student metrics are zero or missing. Still provide a valid risk assessment and explain how the lack of data impacts the evaluation.'
             : '';
 
-        // Create a comprehensive prompt for AI analysis
+        
         const prompt = `
 You are an AI educational assistant analyzing student risk factors. Based on the following student data, provide a detailed risk assessment.
 
@@ -117,11 +117,11 @@ Format your response as JSON:
         console.log("AI API Response received successfully");
         const aiResponse = completion.choices[0].message.content.trim();
 
-        // Parse the AI response
+        
         let analysis = parseAIJson(aiResponse);
         if (!analysis || typeof analysis.riskScore !== 'number' || !analysis.riskLevel) {
             console.error("AI Response Parse Error: could not parse valid JSON from response", aiResponse);
-            // Fallback to basic calculation if AI fails or returns invalid values
+            
             const riskScore = calculateRiskScore(attendanceRate, grades, gpa, timeliness);
             const riskInfo = getRiskLevel(riskScore);
             analysis = {
@@ -132,7 +132,7 @@ Format your response as JSON:
             };
         }
 
-        // Add color and icon based on risk level
+        
         let color, icon;
         switch (analysis.riskLevel.toLowerCase()) {
             case 'high risk':
@@ -166,7 +166,7 @@ Format your response as JSON:
     } catch (error) {
         console.error("AI Risk Analysis Error:", error.message);
         console.error("Full error:", error);
-        // Fallback to basic calculation
+        
         const attendanceRate = studentData.attendancePercentage || 0;
         const grades = studentData.grades || 0;
         const gpa = studentData.gpa || 0;

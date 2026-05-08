@@ -1,9 +1,9 @@
 const attendanceService = require('../services/attendanceService');
 
-/**
- * Get attendance records for a student
- * GET /api/attendance/student/:studentId
- */
+
+
+
+
 const getStudentAttendanceController = async (req, res) => {
     try {
         const { studentId } = req.params;
@@ -39,11 +39,11 @@ const getStudentAttendanceController = async (req, res) => {
     }
 };
 
-/**
- * Get attendance records for a professor's courses
- * GET /api/attendance/professor/:profId
- * GET /api/attendance/professor/:profId/course/:courseId
- */
+
+
+
+
+
 const getProfessorCourseAttendanceController = async (req, res) => {
     try {
         const { profId, courseId } = req.params;
@@ -79,10 +79,10 @@ const getProfessorCourseAttendanceController = async (req, res) => {
     }
 };
 
-/**
- * Get attendance data for all courses (Admin only)
- * GET /api/attendance/admin/courses
- */
+
+
+
+
 const getAllCoursesAttendanceController = async (req, res) => {
     try {
         const result = await attendanceService.getAllCoursesAttendance();
@@ -109,10 +109,10 @@ const getAllCoursesAttendanceController = async (req, res) => {
     }
 };
 
-/**
- * Record new attendance
- * POST /api/attendance/record
- */
+
+
+
+
 const recordAttendanceController = async (req, res) => {
     try {
         const attendanceData = req.body;
@@ -140,10 +140,10 @@ const recordAttendanceController = async (req, res) => {
     }
 };
 
-/**
- * Update an attendance record
- * PUT /api/attendance/:recordId
- */
+
+
+
+
 const updateAttendanceRecordController = async (req, res) => {
     try {
         const { recordId } = req.params;
@@ -171,10 +171,10 @@ const updateAttendanceRecordController = async (req, res) => {
     }
 };
 
-/**
- * Delete an attendance record
- * DELETE /api/attendance/:recordId
- */
+
+
+
+
 const deleteAttendanceRecordController = async (req, res) => {
     try {
         const { recordId } = req.params;
@@ -201,10 +201,10 @@ const deleteAttendanceRecordController = async (req, res) => {
     }
 };
 
-/**
- * Get attendance summary for a course
- * GET /api/attendance/course/:courseId/summary
- */
+
+
+
+
 const getCourseAttendanceSummaryController = async (req, res) => {
     try {
         const { courseId } = req.params;

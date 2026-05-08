@@ -1,11 +1,11 @@
 const admin = require('firebase-admin');
 const db = admin.firestore();
 
-/**
- * Get all courses for a student with attendance stats
- * @param {string} studentId - Student UID
- * @returns {Promise<{success: boolean, courses?: Array, error?: string}>}
- */
+
+
+
+
+
 const getStudentCoursesWithAttendance = async (studentId) => {
     try {
         if (!studentId) {
@@ -85,13 +85,13 @@ const getStudentCoursesWithAttendance = async (studentId) => {
     }
 };
 
-/**
- * Get all courses with statistics for admin
- * @returns {Promise<{success: boolean, courses?: Array, error?: string}>}
- */
+
+
+
+
 const getAllCoursesWithAttendanceStats = async () => {
     try {
-        // Get all courses
+        
         const coursesSnapshot = await db.collection('courses').get();
         
         if (coursesSnapshot.empty) {
@@ -182,11 +182,11 @@ const getAllCoursesWithAttendanceStats = async () => {
     }
 };
 
-/**
- * Mark attendance for students in a course session
- * @param {Object} attendanceData - Attendance data for multiple students
- * @returns {Promise<{success: boolean, results?: Array, error?: string}>}
- */
+
+
+
+
+
 const markCourseAttendance = async (attendanceData) => {
     try {
         const { courseId, courseName, sessionDate, records, recordedBy } = attendanceData;
@@ -260,12 +260,12 @@ const markCourseAttendance = async (attendanceData) => {
     }
 };
 
-/**
- * Get attendance for a specific course session
- * @param {string} courseId - Course ID
- * @param {string} date - Date (YYYY-MM-DD)
- * @returns {Promise<{success: boolean, records?: Array, error?: string}>}
- */
+
+
+
+
+
+
 const getCourseSessionAttendance = async (courseId, date) => {
     try {
         if (!courseId || !date) {
@@ -289,11 +289,11 @@ const getCourseSessionAttendance = async (courseId, date) => {
     }
 };
 
-/**
- * Get all attendance sessions for a course
- * @param {string} courseId - Course ID
- * @returns {Promise<{success: boolean, sessions?: Array, error?: string}>}
- */
+
+
+
+
+
 const getCourseAttendanceSessions = async (courseId) => {
     try {
         if (!courseId) {

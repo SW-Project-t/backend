@@ -276,7 +276,7 @@ const getAiProgressForStudent = async (studentId) => {
     }
 };
 
-// Departments functions
+
 const addDepartment = async (departmentData) => {
     try {
         const docRef = db.collection('departments').doc();
@@ -305,7 +305,7 @@ const getAllDepartments = async () => {
     }
 };
 
-// Sessions functions
+
 const addSession = async (sessionData) => {
     try {
         const docRef = db.collection('sessions').doc();
@@ -347,7 +347,7 @@ const updateSessionStatus = async (sessionId, isActive) => {
     }
 };
 
-// Enrollments functions
+
 const addEnrollment = async (enrollmentData) => {
     try {
         const docRef = db.collection('enrollments').doc();
@@ -399,7 +399,7 @@ const updateEnrollment = async (enrollmentId, updates) => {
     }
 };
 
-// Audit Logs functions
+
 const addAuditLog = async (logData) => {
     try {
         const docRef = db.collection('audit_logs').doc();
